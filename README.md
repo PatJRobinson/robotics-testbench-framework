@@ -151,3 +151,16 @@ Work in progress → moving from PoC to structured platform
 Simulation =  
 backend-native execution + contract-governed interfaces + ROS application logic
 
+## Notes
+
+isaac docker run command (make dir tree for mounting beforehand):
+
+```
+docker run --name isaac-sim --entrypoint bash -it --rm   --device nvidia.com/gpu=all   --network host   -e ACCEPT_EULA=Y   -e OMNI_ENV_PRIVACY_CONSENT=Y   -e NVIDIA_DRIVER_C
+APABILITIES=all   -u 1234:1234   -v ~/docker/isaac-sim/cache/main:/isaac-sim/.cache:rw   -v ~/docker/isaac-sim/cach
+e/computecache:/isaac-sim/.nv/ComputeCache:rw   -v ~/docker/isaac-sim/logs:/isaac-sim/.nvidia-omniverse/logs:rw   -
+v ~/docker/isaac-sim/config:/isaac-sim/.nvidia-omniverse/config:rw   -v ~/docker/isaac-sim/data:/isaac-sim/.local/s
+hare/ov/data:rw   -v ~/docker/isaac-sim/pkg:/isaac-sim/.local/share/ov/pkg:rw   nvcr.io/nvidia/isaac-sim:5.1.0
+```
+
+View using the streaming client, available as an appimage.
