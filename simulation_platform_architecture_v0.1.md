@@ -63,6 +63,7 @@ A backend is responsible for:
 - robot embodiment in simulation
 - world execution
 - backend-specific bridge/adaptation into ROS-facing interfaces
+- providing 'scenario realisations' which are native implementations (e.g., projects) of certain scenario contracts
 
 A backend is not responsible for:
 
@@ -70,6 +71,7 @@ A backend is not responsible for:
 - research controllers
 - planning algorithms
 - evaluation metrics.
+
 
 ### Scenario Layer
 
@@ -86,6 +88,8 @@ A scenario is not a full universal world representation. It is a backend-agnosti
 - and experiment metadata
 
 A backend then realises that scenario using native assets and configuration.
+
+> Backend realizations bind scenarios to backends and are the runnable units exposed to the application layer.
 
 ### Application Layer
 
@@ -170,6 +174,18 @@ scenario:
   success_criteria:
     type: manual_operation
 ```
+
+It is the semantic shape of the experiment.
+
+A scenario realisation is a backend native realisation of a scenario. For example, in Isaac Sim,
+this would be a project file that loads all neccessary extensions, assets, action graphs, etc, and
+the world.
+
+**Concretely:**
+
+- a scenario does not directly map to a backend
+- a scenario declares requirements
+- one or more realizations may satisfy those requirements
 
 ### 4.3 Robot
 
@@ -395,7 +411,7 @@ A scenario has two levels:
 
 Backend-agnostic description of task and requirements.
 
-### Backend realisation
+### Scenario realisation
 
 A native implementation of that scenario for a given backend.
 
@@ -414,7 +430,7 @@ This avoids forcing a universal world format too early while still preserving cr
 Likewise, a robot has:
 
 - a semantic contract identity
-- and one or more backend realisations
+- and one or more scenario realisations
 
 Example:
 
@@ -422,7 +438,7 @@ Example:
 - `turtlebot_like@isaac`
 - `turtlebot_like@gazebo`
 
-A backend realisation may differ in asset representation and internal machinery, but must satisfy the same exposed contract.
+A scenario realisation may differ in asset representation and internal machinery, but must satisfy the same exposed contract.
 
 ---
 
@@ -537,10 +553,10 @@ infra/
 contains simulator-specific launcher and adapter logic.
 
 `scenarios/`
-contains semantic scenario definitions and backend realisations.
+contains semantic scenario definitions and scenario realisations.
 
 `robots/`
-contains semantic robot contracts and backend realisations.
+contains semantic robot contracts and scenario realisations.
 
 `apps/`
 contains ROS application logic intended to remain backend-agnostic.
@@ -578,7 +594,7 @@ This should assume only:
 
 ### Step 3
 
-Implement two backend realisations:
+Implement two scenario realisations:
 
 - `warehouse_teleop@gazebo`
 - `warehouse_teleop@isaac`
@@ -625,6 +641,7 @@ The point of v0.1 is to establish stable architectural seams through one strong 
 This platform treats simulation not as a monolithic application but as a composition of:
 
 - backend-native world execution
+- realization-mediated binding between semantic contracts and backend-native machinery
 - contract-governed robot and scenario semantics
 - ROS-based application logic
 - and thin observational frontends
