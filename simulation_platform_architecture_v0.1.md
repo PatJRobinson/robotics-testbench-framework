@@ -25,7 +25,7 @@ Worlds, assets, and simulator-specific machinery stay native to each backend unl
 
 **Stable seams over maximum abstraction**
 
-Only interfaces that are meaningfully reusable get standardized. Everything else stays local to adapters.
+Only interfaces that are meaningfully reusable get standardised. Everything else stays local to adapters.
 
 **ROS as application surface**
 
@@ -37,7 +37,7 @@ The frontend is for viewing and operating the system, not for owning behavior.
 
 **Reproducibility by default**
 
-The application layer should remain declarative and portable through Nix. Simulation infrastructure should remain containerized and composable.
+The application layer should remain declarative and portable through Nix. Simulation infrastructure should remain containerised and composable.
 
 ---
 
@@ -47,7 +47,7 @@ The platform is composed of four layers.
 
 ### Backend Layer
 
-A backend owns the simulation engine and all machinery needed to realize a scenario in that engine.
+A backend owns the simulation engine and all machinery needed to realise a scenario in that engine.
 
 Examples:
 
@@ -85,7 +85,7 @@ A scenario is not a full universal world representation. It is a backend-agnosti
 - degradation knobs
 - and experiment metadata
 
-A backend then realizes that scenario using native assets and configuration.
+A backend then realises that scenario using native assets and configuration.
 
 ### Application Layer
 
@@ -203,8 +203,8 @@ robot:
 An experiment is a runnable composition of:
 
 - one backend
-- one scenario realization
-- one robot realization
+- one scenario realisation
+- one robot realisation
 - one application stack
 - and zero or more perturbations
 
@@ -225,7 +225,7 @@ These are not sensors themselves, but what the world *affords* sensing.
 
 ---
 
-### 5.2 Observation Realization (Backend Adapters)
+### 5.2 Observation Realisation (Backend Adapters)
 
 Backend-native implementations:
 
@@ -269,8 +269,8 @@ All higher-level processing:
 
 ### 5.5 Key Principle
 
-Backends provide affordances and realization.
-Contracts standardize access.
+Backends provide affordances and realisation.
+Contracts standardise access.
 Applications consume and transform observations.
 
 ---
@@ -361,7 +361,7 @@ A component is compatible only if additional features are enabled.
 
 Example:
 
-lidar-supported scenario only if the backend and robot realization both provide lidar.
+lidar-supported scenario only if the backend and robot realisation both provide lidar.
 
 ---
 
@@ -372,11 +372,11 @@ Each backend should be implemented as an adapter around native simulator machine
 A backend adapter is responsible for:
 
 - launching the simulator
-- realizing a scenario in backend-native form
+- realising a scenario in backend-native form
 - instantiating backend-native robot assets
 - exposing required ROS interfaces
 - managing simulator-specific lifecycle
-- normalizing simulator-specific quirks behind contracts
+- normalising simulator-specific quirks behind contracts
 
 Examples:
 
@@ -387,7 +387,7 @@ Examples:
 
 ---
 
-## 9. Scenario Realization Model
+## 9. Scenario Realisation Model
 
 A scenario has two levels:
 
@@ -395,7 +395,7 @@ A scenario has two levels:
 
 Backend-agnostic description of task and requirements.
 
-### Backend realization
+### Backend realisation
 
 A native implementation of that scenario for a given backend.
 
@@ -409,12 +409,12 @@ This avoids forcing a universal world format too early while still preserving cr
 
 ---
 
-## 10. Robot Realization Model
+## 10. Robot Realisation Model
 
 Likewise, a robot has:
 
 - a semantic contract identity
-- and one or more backend realizations
+- and one or more backend realisations
 
 Example:
 
@@ -422,7 +422,7 @@ Example:
 - `turtlebot_like@isaac`
 - `turtlebot_like@gazebo`
 
-A backend realization may differ in asset representation and internal machinery, but must satisfy the same exposed contract.
+A backend realisation may differ in asset representation and internal machinery, but must satisfy the same exposed contract.
 
 ---
 
@@ -447,7 +447,7 @@ This matters because many important semantics are temporal:
 - when commands take effect
 - when resets happen
 - how clock is propagated
-- whether observations are valid before or after initialization
+- whether observations are valid before or after initialisation
 
 The architecture should model these events explicitly where useful.
 
@@ -459,7 +459,7 @@ The first slice should stay small.
 
 ### Slice: AMR teleop
 
-This slice exists to prove the architecture, not to maximize features.
+This slice exists to prove the architecture, not to maximise features.
 
 **Scenario**
 - `warehouse_teleop`
@@ -488,8 +488,8 @@ This is the right first proof because it validates:
 
 - backend modularity
 - ROS application stability
-- scenario realization
-- robot contract realization
+- scenario realisation
+- robot contract realisation
 - simulator/ROS bridge correctness
 
 ---
@@ -537,10 +537,10 @@ infra/
 contains simulator-specific launcher and adapter logic.
 
 `scenarios/`
-contains semantic scenario definitions and backend realizations.
+contains semantic scenario definitions and backend realisations.
 
 `robots/`
-contains semantic robot contracts and backend realizations.
+contains semantic robot contracts and backend realisations.
 
 `apps/`
 contains ROS application logic intended to remain backend-agnostic.
@@ -578,7 +578,7 @@ This should assume only:
 
 ### Step 3
 
-Implement two backend realizations:
+Implement two backend realisations:
 
 - `warehouse_teleop@gazebo`
 - `warehouse_teleop@isaac`
@@ -629,4 +629,4 @@ This platform treats simulation not as a monolithic application but as a composi
 - ROS-based application logic
 - and thin observational frontends
 
-The platform should preserve backend specificity where necessary while standardizing only those interfaces and semantics that are valuable to keep stable across experiments.
+The platform should preserve backend specificity where necessary while standardising only those interfaces and semantics that are valuable to keep stable across experiments.
