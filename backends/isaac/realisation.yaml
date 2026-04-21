@@ -1,0 +1,128 @@
+apiVersion: sim.platform/v0.1
+kind: Realisation
+
+metadata:
+  name: warehouse_teleop@isaac
+  contractVersion: v0.1
+  description: >
+    Isaac Sim realisation of the warehouse_teleop scenario using a
+    turtlebot-like differential-drive robot in a small warehouse stage.
+
+spec:
+  scenarioRef: warehouse_teleop
+  backendRef: isaac
+  robotRef: turtlebot_like
+
+  provides:
+    robotContracts:
+      - differential_drive
+
+    interfaceContracts:
+      commands:
+        - name: /cmd_vel
+          type: geometry_msgs/msg/Twist
+          required: true
+
+      observations:
+        - name: /clock
+          type: rosgraph_msgs/msg/Clock
+          required: true
+
+        - name: /odom
+          type: nav_msgs/msg/Odometry
+          required: false
+
+        - name: /tf
+          type: tf2_msgs/msg/TFMessage
+          required: false
+
+        - name: /scan
+          type: sensor_msgs/msg/LaserScan
+          required: false
+
+    observationContracts:
+      - sim_clock
+      - odometry
+      - tf_tree
+
+  native:
+    world:
+      type: usd_stage
+      entrypoint: scenarios/warehouse_teleop/isaac/worlds/warehouse_teleop.usd
+
+    robot:
+      type: usd_reference
+      entrypoint: robots/turtlebot_like/isaac/robot.usd
+      spawn:
+        frame: map
+        pose:
+          x: 0.0
+          y: 0.0
+          z: 0.1
+          yaw: 0.0
+
+    control:
+      type: action_graph
+      entrypoint: scenarios/warehouse_teleop/isaac/graphs/cmd_vel_drive.yaml
+      notes:
+        - >
+          Realisation must subscribe to /cmd_vel and map Twist linear.x and
+          angular.z into differential drive wheel commands.
+
+    observations:
+      - name: sim_clock
+        type: native_ros2_bridge
+      - name: odometry
+        type: optional_native_graph
+      - name: tf_tree
+        type: optional_native_graph
+      - name: lidar2d
+        type: optional_native_sensor
+
+  runtime:
+    launch:
+      mode: headless_streaming
+      command: ./runheadless.sh
+
+    infrastructure:
+      containerised: true
+      networking: host
+      ipc: host
+
+    environment:
+      ROS_DISTRO: jazzy
+      RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+      FASTRTPS_DEFAULT_PROFILES_FILE: ~/.ros/fastdds.xml
+      LD_LIBRARY_PATH_APPEND:
+        - /isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib
+
+    prerequisites:
+      - isaacsim.ros2.bridge extension enabled
+      - Fast DDS UDP profile available inside container
+      - ROS 2 bridge loads successfully before scenario use
+
+  lifecycle:
+    supports:
+      - start
+      - stop
+      - reset
+
+    resetSemantics:
+      description: >
+        Reset returns the simulation to the initial spawn pose and restarts
+        realisation-local runtime state where supported.
+
+  constraints:
+    knownIssues:
+      - >
+        Robot scale and controller geometry must match the realised robot asset
+        or teleop behavior may arc or drift.
+      - >
+        DDS transport profile must be configured correctly for ROS messages to
+        flow across Docker boundaries.
+
+  tags:
+    - amr
+    - teleop
+    - warehouse
+    - isaac

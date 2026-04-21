@@ -1,0 +1,69 @@
+apiVersion: sim.platform/v0.1
+kind: Scenario
+
+metadata:
+  name: warehouse_teleop
+  description: >
+    Minimal AMR teleoperation scenario in a small warehouse environment.
+    Intended as the first cross-backend vertical slice.
+
+spec:
+  domain: amr
+  task: teleop
+
+  environment:
+    class: warehouse_small
+    semantics:
+      indoor: true
+      structured: true
+      traversable_floor: true
+      static_obstacles: true
+      dynamic_obstacles: false
+
+  requires:
+    robotContracts:
+      - differential_drive
+
+    interfaces:
+      commands:
+        - /cmd_vel
+      observations:
+        - /clock
+
+    features:
+      - sim_clock
+      - ros2_bridge
+
+  optional:
+    interfaces:
+      observations:
+        - /odom
+        - /tf
+        - /scan
+
+    observationContracts:
+      - odometry
+      - tf_tree
+      - lidar2d
+
+  initialConditions:
+    robotSpawn:
+      frame: map
+      pose:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        yaw: 0.0
+
+  successCriteria:
+    type: manual_operation
+    description: >
+      A compatible robot can be teleoperated through the warehouse using the
+      standard ROS /cmd_vel interface.
+
+  experimentHooks:
+    supports:
+      - command_latency
+      - command_dropout
+      - odom_noise
+      - lidar_dropout

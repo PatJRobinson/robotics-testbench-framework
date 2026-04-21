@@ -1,0 +1,58 @@
+apiVersion: sim.platform/v0.1
+kind: Robot
+
+metadata:
+  name: turtlebot_like
+  description: >
+    Small mobile base used as the canonical AMR test robot for the initial
+    teleop slice.
+
+spec:
+  structure:
+    class: mobile_base
+    contract: differential_drive
+
+  interfaces:
+    commands:
+      - name: /cmd_vel
+        type: geometry_msgs/msg/Twist
+        required: true
+
+    observations:
+      - name: /odom
+        type: nav_msgs/msg/Odometry
+        required: false
+
+      - name: /tf
+        type: tf2_msgs/msg/TFMessage
+        required: false
+
+      - name: /scan
+        type: sensor_msgs/msg/LaserScan
+        required: false
+
+  behavior:
+    resettable: true
+    simClockAware: true
+    supportsTeleop: true
+
+  capabilities:
+    locomotion:
+      differentialDrive: true
+
+    observationSupport:
+      odometry: true
+      tfTree: true
+      lidar2d: optional
+      rgbCamera: optional
+      imu: optional
+
+  constraints:
+    requires:
+      - traversable_floor
+
+  frames:
+    base: base_link
+    footprint: base_footprint
+    odom: odom
+    map: map

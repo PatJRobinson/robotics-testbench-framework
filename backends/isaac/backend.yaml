@@ -1,0 +1,65 @@
+apiVersion: sim.platform/v0.1
+kind: Backend
+
+metadata:
+  name: isaac
+  description: >
+    NVIDIA Isaac Sim backend for AMR and perception-oriented simulation.
+
+spec:
+  runtime:
+    type: containerized
+    engine: isaac-sim
+    version: "5.1"
+
+  supports:
+    domains:
+      - amr
+      - perception
+
+    robotContracts:
+      - differential_drive
+
+    observationContracts:
+      - odometry
+      - tf_tree
+      - lidar2d
+      - rgb_camera
+      - imu
+
+    features:
+      - sim_clock
+      - ros2_bridge
+      - headless_streaming
+      - webrtc_streaming
+
+  requires:
+    infrastructure:
+      - docker
+      - host_networking
+      - host_ipc
+
+    environment:
+      - ROS_DISTRO=jazzy
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE
+      - LD_LIBRARY_PATH+=/isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib
+
+  realizationModel:
+    worldFormat: usd
+    robotBinding: native_asset_or_usd_reference
+    observationRealization: native
+
+  constraints:
+    notes:
+      - >
+        ROS 2 bridge must be active in the Isaac runtime for contract exposure.
+      - >
+        Docker-based ROS communication requires explicit Fast DDS profile setup.
+      - >
+        A realization may depend on action graphs, enabled extensions, and
+        backend-local runtime scripts.
+
+  excludes:
+    domains:
+      - av_fullstack

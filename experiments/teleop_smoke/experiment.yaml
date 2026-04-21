@@ -1,0 +1,41 @@
+apiVersion: sim.platform/v0.1
+kind: Experiment
+
+metadata:
+  name: teleop_smoke
+  description: >
+    Minimal interactive experiment used to validate that the same AMR teleop
+    application can operate against different backend realisations.
+
+spec:
+  mode: interactive
+
+  appRef: amr_teleop
+  realisationRef: warehouse_teleop@isaac
+
+  successCriteria:
+    description: >
+      The application successfully publishes velocity commands to a compatible
+      realisation, and the robot responds to teleoperation in simulation.
+    requires:
+      - /cmd_vel accepted by realisation
+      - robot motion observable
+      - /clock available to application
+
+  optionalChecks:
+    - /odom available
+    - /tf available
+
+  perturbations: []
+
+  outputs:
+    record:
+      - runtime_logs
+      - selected_realisation
+      - selected_app
+      - experiment_result
+
+  tags:
+    - smoke_test
+    - teleop
+    - interactive

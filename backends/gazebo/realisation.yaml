@@ -1,0 +1,120 @@
+apiVersion: sim.platform/v0.1
+kind: Realisation
+
+metadata:
+  name: warehouse_teleop@gazebo
+  contractVersion: v0.1
+  description: >
+    Gazebo realisation of the warehouse_teleop scenario using a turtlebot-like
+    differential-drive robot in a small warehouse world.
+
+spec:
+  scenarioRef: warehouse_teleop
+  backendRef: gazebo
+  robotRef: turtlebot_like
+
+  provides:
+    robotContracts:
+      - differential_drive
+
+    interfaceContracts:
+      commands:
+        - name: /cmd_vel
+          type: geometry_msgs/msg/Twist
+          required: true
+
+      observations:
+        - name: /clock
+          type: rosgraph_msgs/msg/Clock
+          required: true
+
+        - name: /odom
+          type: nav_msgs/msg/Odometry
+          required: false
+
+        - name: /tf
+          type: tf2_msgs/msg/TFMessage
+          required: false
+
+        - name: /scan
+          type: sensor_msgs/msg/LaserScan
+          required: false
+
+    observationContracts:
+      - sim_clock
+      - odometry
+      - tf_tree
+
+  native:
+    world:
+      type: sdf_world
+      entrypoint: scenarios/warehouse_teleop/gazebo/worlds/warehouse_teleop.sdf
+
+    robot:
+      type: sdf_model
+      entrypoint: robots/turtlebot_like/gazebo/model.sdf
+      spawn:
+        frame: map
+        pose:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+          yaw: 0.0
+
+    control:
+      type: ros2_control_or_plugin
+      entrypoint: scenarios/warehouse_teleop/gazebo/plugins/cmd_vel_drive.yaml
+      notes:
+        - >
+          Realisation must consume /cmd_vel and drive a differential base using
+          Gazebo-native control and bridge mechanisms.
+
+    observations:
+      - name: sim_clock
+        type: native_bridge
+      - name: odometry
+        type: optional_native_plugin
+      - name: tf_tree
+        type: optional_ros_integration
+      - name: lidar2d
+        type: optional_native_sensor
+
+  runtime:
+    launch:
+      mode: headless
+      command: docker compose up
+
+    infrastructure:
+      containerised: true
+
+    environment:
+      ROS_DISTRO: jazzy
+
+    prerequisites:
+      - Gazebo world and robot assets available
+      - Required ROS bridge or plugin wiring enabled
+
+  lifecycle:
+    supports:
+      - start
+      - stop
+      - reset
+
+    resetSemantics:
+      description: >
+        Reset returns the simulation to the initial world and robot state
+        according to Gazebo world reset semantics.
+
+  constraints:
+    knownIssues:
+      - >
+        Observation fidelity may differ from Isaac even when the same
+        observation contracts are satisfied.
+      - >
+        Plugin and bridge configuration may be realisation-specific.
+
+  tags:
+    - amr
+    - teleop
+    - warehouse
+    - gazebo

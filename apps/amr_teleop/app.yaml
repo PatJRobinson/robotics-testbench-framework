@@ -1,0 +1,77 @@
+apiVersion: sim.platform/v0.1
+kind: App
+
+metadata:
+  name: amr_teleop
+  description: >
+    Minimal ROS 2 teleoperation application for differential-drive AMRs.
+    Intended as the first cross-backend application slice.
+
+spec:
+  category: interactive_control
+
+  requires:
+    robotContracts:
+      - differential_drive
+
+    interfaceContracts:
+      commands:
+        - name: /cmd_vel
+          type: geometry_msgs/msg/Twist
+          direction: publish
+          required: true
+
+      observations:
+        - name: /clock
+          type: rosgraph_msgs/msg/Clock
+          direction: subscribe
+          required: true
+
+    features:
+      - sim_clock
+
+  optional:
+    interfaceContracts:
+      observations:
+        - name: /odom
+          type: nav_msgs/msg/Odometry
+          direction: subscribe
+          required: false
+
+        - name: /tf
+          type: tf2_msgs/msg/TFMessage
+          direction: subscribe
+          required: false
+
+        - name: /scan
+          type: sensor_msgs/msg/LaserScan
+          direction: subscribe
+          required: false
+
+  provides:
+    behaviours:
+      - manual_velocity_control
+
+  runtime:
+    type: ros2_node
+    entrypoint: apps/amr_teleop/launch/teleop.launch.py
+
+  lifecycle:
+    supports:
+      - start
+      - stop
+
+  constraints:
+    notes:
+      - >
+        This application assumes a compatible realisation exposes /cmd_vel and
+        /clock with valid runtime semantics.
+      - >
+        Odom, tf, and scan are optional and may be used for visualisation or
+        later extensions, but are not required for the teleop smoke test.
+
+  tags:
+    - amr
+    - teleop
+    - ros2
+    - differential_drive
