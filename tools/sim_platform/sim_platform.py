@@ -6,10 +6,17 @@ import subprocess
 from pathlib import Path
 import time
 import yaml
+import os
 
+root_env = os.environ.get("SIM_PLATFORM_ROOT")
 
-ROOT = Path(__file__).resolve().parents[2]
+if root_env is None:
+    raise RuntimeError(
+        "SIM_PLATFORM_ROOT is not set. Run inside nix develop or set it to the project root."
+    )
 
+ROOT = Path(root_env).resolve()
+RUNS_DIR = Path(os.environ.get("SIM_PLATFORM_RUNS_DIR", ROOT / "runs")).resolve()
 
 def load_yaml(path: Path) -> dict:
     with path.open("r") as f:
@@ -96,7 +103,7 @@ def wait_for_topic(topic: str, timeout: float = 120.0) -> None:
                 return
 
         except Exception:
-            pass
+            print(f"[sim-platform] readiness check failed: {e}")
 
         if time.time() - start > timeout:
             raise RuntimeError(f"Timeout waiting for topic: {topic}")

@@ -1,8 +1,7 @@
 {
-  description = "ROS 2 jazzy devShell + Minimal Headless Gazebo Sim Garden (Docker) + Foxglove-ready";
+  description = "Robotics testbench framework: ROS 2 Jazzy + Nix + Docker simulation backends";
 
   inputs = {
-    #nixpkgs.url = "nixpkgs/nixos-unstable";
     nix-ros-overlay.url = "github:lopsided98/nix-ros-overlay/master";
     nixpkgs.follows = "nix-ros-overlay/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
@@ -34,43 +33,71 @@
       };
 
       ros = pkgs.rosPackages.jazzy;
+
+      rosEnv = ros.buildEnv {
+        paths = [
+          ros.ros-core
+          ros.ros-base
+          ros.desktop
+
+          # App dependency for apps/amr_teleop/run.sh
+          ros.teleop-twist-keyboard
+        ];
+      };
+
+      simPlatform = pkgs.writeShellApplication {
+        name = "sim-platform";
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.python3Packages.pyyaml
+          pkgs.docker
+          rosEnv
+        ];
+        text = ''
+          exec ${pkgs.python3}/bin/python ${self}/tools/sim_platform/sim_platform.py "$@"
+        '';
+      };
     in {
       devShells.default = pkgs.mkShell {
-        name = "ros2-jazzy-sim";
+        name = "robotics-testbench-framework";
 
         packages = [
-          # ROS 2 base stack
-          (ros.buildEnv {
-            paths = [
-              ros.ros-core
-              ros.ros-base
-              ros.desktop
-            ];
-          })
+          rosEnv
+
+          simPlatform
+
+          pkgs.python3
+          pkgs.python3Packages.pyyaml
 
           pkgs.docker
           pkgs.git
         ];
 
         shellHook = ''
+          export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+          export FASTRTPS_DEFAULT_PROFILES_FILE="$PWD/infra/dds-cfg/fastdds.xml"
+          export SIM_PLATFORM_ROOT="$PWD"
+          export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
 
-          # generate a script to source inside docker to
-          # share host environment
           generate_env_file() {
-            env | grep -E '^(PATH|LD_LIBRARY_PATH|PYTHONPATH|AMENT|COLCON|ROS_|RMW|GZ_)=' \
+            env | grep -E '^(PATH|LD_LIBRARY_PATH|PYTHONPATH|AMENT|COLCON|ROS_|RMW|GZ_|FASTRTPS_)=' \
               | sed 's/^/export /' \
               > .env.sh
           }
+
           generate_env_file
 
-          export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-          export FASTRTPS_DEFAULT_PROFILES_FILE=infra/dds-cfg/fastdds.xml
-
           echo ""
-          echo "ROS 2 jazzy DevShell"
+          echo "Robotics Testbench Framework"
           echo "----------------------------------------------"
+          echo "ROS_DISTRO=$ROS_DISTRO"
+          echo "RMW_IMPLEMENTATION=$RMW_IMPLEMENTATION"
+          echo "FASTRTPS_DEFAULT_PROFILES_FILE=$FASTRTPS_DEFAULT_PROFILES_FILE"
           echo ""
-
+          echo "Try:"
+          echo "  sim-platform resolve experiment teleop_smoke"
+          echo "  sim-platform run experiment teleop_smoke"
+          echo ""
         '';
       };
     });
