@@ -4,7 +4,7 @@
 import argparse
 import subprocess
 from pathlib import Path
-
+import time
 import yaml
 
 
@@ -64,6 +64,8 @@ def resolve_experiment(name: str) -> dict:
         "backend_ref": realisation["spec"]["backendRef"],
         "backend_launch": realisation["spec"]["runtime"]["launch"]["command"],
         "world_path": realisation["spec"]["native"]["world"]["containerPath"],
+        "readiness": realisation["spec"]["runtime"].get("readiness", {}),
+        "container_name": realisation["spec"]["runtime"]["containerName"],
     }
 
 
@@ -72,6 +74,34 @@ def print_plan(plan: dict) -> None:
     for key, value in plan.items():
         print(f"  {key}: {value}")
 
+
+def wait_for_topic(topic: str, timeout: float = 120.0) -> None:
+    print(f"\n[sim-platform] Waiting for topic: {topic}")
+
+    start = time.time()
+
+    while True:
+        try:
+            result = subprocess.run(
+                ["ros2", "topic", "list"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            topics = result.stdout.splitlines()
+
+            if topic in topics:
+                print(f"[sim-platform] Found topic: {topic}")
+                return
+
+        except Exception:
+            pass
+
+        if time.time() - start > timeout:
+            raise RuntimeError(f"Timeout waiting for topic: {topic}")
+
+        time.sleep(1.0)
 
 def run_experiment(name: str) -> None:
     plan = resolve_experiment(name)
@@ -83,13 +113,25 @@ def run_experiment(name: str) -> None:
     print("\nStarting backend:")
     print(f"  {backend_cmd}")
 
+    log_path = ROOT / "runs" / plan["experiment_name"] / "backend.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    log_file = log_path.open("w")
+
     backend_proc = subprocess.Popen(
         ["bash", str(backend_cmd), plan["world_path"]],
-        cwd=ROOT
+        cwd=ROOT,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
     )
 
     try:
-        input("\nPress Enter once backend is ready, then app will start... ")
+        topic = plan["readiness"].get("topic")
+
+        if topic:
+            wait_for_topic("/cmd_vel")
+
+        print(f"[sim-platform] Backend logs: {log_path}")
 
         print("\nStarting app:")
         print(f"  {app_cmd}")
@@ -99,6 +141,11 @@ def run_experiment(name: str) -> None:
         print("\nStopping backend...")
         backend_proc.terminate()
 
+        subprocess.run(
+          ["docker", "rm", "-f", plan["container_name"]],
+          cwd=ROOT,
+          check=False,
+        )
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="sim-platform")

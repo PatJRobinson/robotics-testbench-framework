@@ -5,7 +5,7 @@ WORLD_PATH="${1:?Usage: run.sh <world_usd_path>}"
 
 docker run \
   --name isaac-sim \
-  --entrypoint bash -it --rm \
+  --entrypoint bash --rm \
   --device nvidia.com/gpu=all \
   --network host \
   -e ACCEPT_EULA=Y   -e OMNI_ENV_PRIVACY_CONSENT=Y   -e NVIDIA_DRIVER_CAPABILITIES=all \

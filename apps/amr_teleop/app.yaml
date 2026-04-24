@@ -54,7 +54,7 @@ spec:
 
   runtime:
     type: ros2_node
-    entrypoint: apps/amr_teleop/launch/teleop.launch.py
+    entrypoint: apps/amr_teleop/run.sh
 
   lifecycle:
     supports:

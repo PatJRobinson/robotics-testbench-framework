@@ -82,6 +82,13 @@ spec:
         type: optional_native_sensor
 
   runtime:
+    containerName: isaac-sim
+
+    readiness:
+      type: ros_topic
+      topic: /cmd_vel
+      timeoutSeconds: 120
+
     launch:
       mode: headless_streaming
       command: backends/isaac/run.sh
