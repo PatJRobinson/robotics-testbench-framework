@@ -1,0 +1,16 @@
+<profiles>
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>udp_transport</transport_id>
+      <type>UDPv4</type>
+    </transport_descriptor>
+  </transport_descriptors>
+  <participant profile_name="participant_profile" is_default_profile="true">
+    <rtps>
+      <useBuiltinTransports>false</useBuiltinTransports>
+      <userTransports>
+        <transport_id>udp_transport</transport_id>
+      </userTransports>
+    </rtps>
+  </participant>
+</profiles>

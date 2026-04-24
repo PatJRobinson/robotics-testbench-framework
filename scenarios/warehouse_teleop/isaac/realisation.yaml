@@ -49,6 +49,7 @@ spec:
     world:
       type: usd_stage
       entrypoint: scenarios/warehouse_teleop/isaac/worlds/warehouse_teleop.usd
+      containerPath: /worlds/warehouse_teleop.usd
 
     robot:
       type: usd_reference
@@ -63,11 +64,12 @@ spec:
 
     control:
       type: action_graph
-      entrypoint: scenarios/warehouse_teleop/isaac/graphs/cmd_vel_drive.yaml
+      entrypoint: scenarios/warehouse_teleop/isaac/graphs/cmd_vel_drive.md
       notes:
         - >
           Realisation must subscribe to /cmd_vel and map Twist linear.x and
           angular.z into differential drive wheel commands.
+      persistence: embedded_in_usd
 
     observations:
       - name: sim_clock
@@ -82,7 +84,7 @@ spec:
   runtime:
     launch:
       mode: headless_streaming
-      command: ./runheadless.sh
+      command: backends/isaac/run.sh
 
     infrastructure:
       containerised: true
