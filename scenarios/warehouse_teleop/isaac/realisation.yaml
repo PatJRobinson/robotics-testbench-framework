@@ -89,6 +89,9 @@ spec:
       topic: /cmd_vel
       timeoutSeconds: 120
 
+    rendering:
+      mode: offscreen
+
     launch:
       mode: headless_streaming
       command: backends/isaac/run.sh

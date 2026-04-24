@@ -89,7 +89,7 @@ A scenario is not a full universal world representation. It is a backend-agnosti
 
 A backend then realises that scenario using native assets and configuration.
 
-> Backend realizations bind scenarios to backends and are the runnable units exposed to the application layer.
+> Backend realisations bind scenarios to backends and are the runnable units exposed to the application layer.
 
 ### Application Layer
 
@@ -120,6 +120,17 @@ Examples:
 - web dashboards
 
 It should observe and operate, but not contain essential domain logic.
+
+Attachable view clients:
+- Isaac WebRTC client
+- RViz
+- Foxglove
+
+Backend-native GUI modes:
+- CARLA Unreal window
+
+View layer may consist of attachable clients (RViz, Foxglove, Isaac client),
+but these are not yet managed by the framework.
 
 ---
 
@@ -185,7 +196,7 @@ the world.
 
 - a scenario does not directly map to a backend
 - a scenario declares requirements
-- one or more realizations may satisfy those requirements
+- one or more realisations may satisfy those requirements
 
 ### 4.3 Robot
 
@@ -430,7 +441,7 @@ This avoids forcing a universal world format too early while still preserving cr
 Likewise, a robot has:
 
 - a semantic contract identity
-- and one or more scenario realisations
+- and one or more robot realisations
 
 Example:
 
@@ -641,7 +652,7 @@ The point of v0.1 is to establish stable architectural seams through one strong 
 This platform treats simulation not as a monolithic application but as a composition of:
 
 - backend-native world execution
-- realization-mediated binding between semantic contracts and backend-native machinery
+- realisation-mediated binding between semantic contracts and backend-native machinery
 - contract-governed robot and scenario semantics
 - ROS-based application logic
 - and thin observational frontends

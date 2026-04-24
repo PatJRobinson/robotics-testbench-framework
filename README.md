@@ -19,10 +19,10 @@ This is both:
 
 Separate the system into clean layers:
 
-- **Backends** → physics + world + observation realization  
+- **Backends** → physics + world + observation realisation  
 - **Contracts** → stable interfaces (ROS topics, semantics)  
 - **Application layer (ROS)** → control, perception, planning  
-- **Frontend** → visualization only  
+- **Frontend** → visualisation only  
 
 ---
 
@@ -44,7 +44,7 @@ Everything declares:
 - lighting
 - dynamics
 
-#### Observation Realization (Backend)
+#### Observation Realisation (Backend)
 - RTX lidar (Isaac)
 - ray sensors (Gazebo)
 - cameras, IMU
@@ -131,12 +131,20 @@ This is an example of **abstraction leakage**:
 
 ---
 
+## Current Status
+
+- Isaac realisation works end-to-end via `sim-platform`
+- Nix devshell provides ROS 2 Jazzy app/runtime environment
+- Runtime resolves experiment → app → realisation → backend
+- Backend readiness and cleanup are handled by the runtime
+- CARLA feasibility spike confirms server/client workflow and NixOS graphics requirements
+
 ## Next Steps
 
-1. AMR teleop on both Gazebo + Isaac  
-2. Add odometry + lidar  
-3. Introduce degradation experiments  
-4. Expand backend support  
+1. Harden Isaac AMR teleop realisation
+2. Add odometry and `/clock`
+3. Add CARLA backend spike as second-domain realisation
+4. Introduce first degradation experiment
 
 ---
 
@@ -153,14 +161,40 @@ backend-native execution + contract-governed interfaces + ROS application logic
 
 ## Notes
 
-isaac docker run command (make dir tree for mounting beforehand):
+### CARLA on NixOS / Docker
+
+CARLA may require the host NVIDIA graphics stack to be mounted into the container:
+
+- mount `/run/opengl-driver`
+- set `VK_ICD_FILENAMES=/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json`
+- set `NVIDIA_DRIVER_CAPABILITIES=graphics,utility,display,video,compute`
+
+Without this, CARLA may fall back to lavapipe/software Vulkan, causing freezes and very slow client calls.
+
+Command dump:
 
 ```
-docker run --name isaac-sim --entrypoint bash -it --rm   --device nvidia.com/gpu=all   --network host   -e ACCEPT_EULA=Y   -e OMNI_ENV_PRIVACY_CONSENT=Y   -e NVIDIA_DRIVER_C
-APABILITIES=all   -u 1234:1234   -v ~/docker/isaac-sim/cache/main:/isaac-sim/.cache:rw   -v ~/docker/isaac-sim/cach
-e/computecache:/isaac-sim/.nv/ComputeCache:rw   -v ~/docker/isaac-sim/logs:/isaac-sim/.nvidia-omniverse/logs:rw   -
-v ~/docker/isaac-sim/config:/isaac-sim/.nvidia-omniverse/config:rw   -v ~/docker/isaac-sim/data:/isaac-sim/.local/s
-hare/ov/data:rw   -v ~/docker/isaac-sim/pkg:/isaac-sim/.local/share/ov/pkg:rw   nvcr.io/nvidia/isaac-sim:5.1.0
+docker run --rm -it \
+  --name carla-sim \
+  --device nvidia.com/gpu=all \
+  --net=host \
+  -e DISPLAY=$DISPLAY \
+  -e XDG_RUNTIME_DIR=/tmp \
+  -e SDL_VIDEODRIVER=x11 \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  -e NVIDIA_DRIVER_CAPABILITIES=all \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  -e NVIDIA_DRIVER_CAPABILITIES=graphics,utility,display,video,compute \
+  -e VK_ICD_FILENAMES=/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json \
+  -v /run/opengl-driver:/run/opengl-driver:ro -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  carlasim/carla:0.9.16 \
+  bash CarlaUE4.sh -nosound
+
 ```
 
-View using the streaming client, available as an appimage.
+^^ runs carla with gui on wayland + NVIDIA desktop
+
+### NVIDIA Isaac
+
+You can run view and interact with the running isaac server instance using the streaming client, available for download from the relevant NVIDIA webpage as an appimage.
+
