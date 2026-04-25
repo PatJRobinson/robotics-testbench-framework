@@ -48,7 +48,7 @@ spec:
   realisationModel:
     worldFormat: usd
     robotBinding: native_asset_or_usd_reference
-    observationRealization: native
+    observationRealisation: native
 
   constraints:
     notes:

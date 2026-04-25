@@ -42,12 +42,12 @@ spec:
   realisationModel:
     worldFormat: sdf
     robotBinding: native_model_or_sdf_include
-    observationRealization: native
+    observationRealisation: native
 
   constraints:
     notes:
       - >
-        Realizations may depend on world plugins, bridge plugins, and backend-
+        Realisations may depend on world plugins, bridge plugins, and backend-
         specific launch configuration.
       - >
         Exact observation fidelity may differ from Isaac even when the same

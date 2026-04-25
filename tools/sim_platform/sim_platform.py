@@ -70,7 +70,7 @@ def resolve_experiment(name: str) -> dict:
         "realisation_path": str(realisation_path.relative_to(ROOT)),
         "backend_ref": realisation["spec"]["backendRef"],
         "backend_launch": realisation["spec"]["runtime"]["launch"]["command"],
-        "world_path": realisation["spec"]["native"]["world"]["containerPath"],
+        "cmd_args": realisation["spec"]["runtime"]["launch"].get("args", []),
         "readiness": realisation["spec"]["runtime"].get("readiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
     }
@@ -102,13 +102,58 @@ def wait_for_topic(topic: str, timeout: float = 120.0) -> None:
                 print(f"[sim-platform] Found topic: {topic}")
                 return
 
-        except Exception:
+        except Exception as e:
             print(f"[sim-platform] readiness check failed: {e}")
 
         if time.time() - start > timeout:
             raise RuntimeError(f"Timeout waiting for topic: {topic}")
 
         time.sleep(1.0)
+
+def wait_for_carla_rpc(host: str, port: int, timeout: float = 120.0) -> None:
+    import time
+    import carla
+
+    print(f"[sim-platform] Waiting for CARLA RPC at {host}:{port}")
+
+    start = time.time()
+
+    while True:
+        try:
+            client = carla.Client(host, port)
+            client.set_timeout(5.0)
+            world = client.get_world()
+            print(f"[sim-platform] CARLA ready: {world.get_map().name}")
+            return
+        except Exception as e:
+            if time.time() - start > timeout:
+                raise RuntimeError(
+                    f"Timed out waiting for CARLA RPC at {host}:{port}: {e}"
+                )
+
+            time.sleep(1.0)
+
+def wait_for_readiness(readiness: dict) -> None:
+    if not readiness:
+        return
+
+    readiness_type = readiness["type"]
+    timeout = readiness.get("timeoutSeconds", 120)
+
+    if readiness_type == "ros_topic":
+        topic = readiness.get("topic")
+        if topic:
+            wait_for_topic(topic)
+
+    elif readiness_type == "carla_rpc":
+        wait_for_carla_rpc(
+            readiness.get("host", "localhost"),
+            int(readiness.get("port", 2000)),
+            timeout=timeout,
+        )
+
+    else:
+        raise ValueError(f"Unknown readiness type: {readiness_type}")
 
 def run_experiment(name: str) -> None:
     plan = resolve_experiment(name)
@@ -125,18 +170,18 @@ def run_experiment(name: str) -> None:
 
     log_file = log_path.open("w")
 
+    cmd_args = plan["cmd_args"]
+    print(f"Running process with command {backend_cmd} {cmd_args}")
+
     backend_proc = subprocess.Popen(
-        ["bash", str(backend_cmd), plan["world_path"]],
+        ["bash", str(backend_cmd), *plan["cmd_args"]],
         cwd=ROOT,
         stdout=log_file,
         stderr=subprocess.STDOUT,
     )
 
     try:
-        topic = plan["readiness"].get("topic")
-
-        if topic:
-            wait_for_topic("/cmd_vel")
+        wait_for_readiness(plan["readiness"])
 
         print(f"[sim-platform] Backend logs: {log_path}")
 

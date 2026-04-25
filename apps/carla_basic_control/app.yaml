@@ -1,0 +1,40 @@
+apiVersion: sim.platform/v0.1
+kind: App
+
+metadata:
+  name: carla_basic_control
+  description: >
+    Minimal CARLA control app. Connects to the CARLA server, finds the ego
+    vehicle by role_name, applies throttle, and verifies that the vehicle moves.
+
+spec:
+  runtime:
+    type: python
+    entrypoint: apps/carla_basic_control/run.py
+
+  requires:
+    platformContracts:
+      - ego_vehicle
+
+    interfaces:
+      commands:
+        - name: carla_python_api
+          type: carla.Client
+
+      observations:
+        - name: ego_pose
+          type: carla.Location
+
+  behaviour:
+    mode: scripted
+    durationSeconds: 5
+
+  successCriteria:
+    description: >
+      The app successfully applies control to the ego vehicle and observes
+      a change in position.
+
+  tags:
+    - carla
+    - control
+    - smoke_test

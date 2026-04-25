@@ -1,0 +1,38 @@
+apiVersion: sim.platform/v0.1
+kind: Experiment
+
+metadata:
+  name: carla_teleop_smoke
+  description: >
+    Minimal CARLA smoke test. Launches the CARLA urban_teleop realisation,
+    starts a basic control app, and verifies that the ego vehicle can move.
+
+spec:
+  mode: scripted
+
+  appRef: carla_basic_control
+  realisationRef: urban_teleop@carla
+
+  successCriteria:
+    description: >
+      The CARLA server becomes reachable, the realisation spawns an ego vehicle,
+      and the app applies control such that the vehicle pose changes.
+    requires:
+      - CARLA RPC available on localhost:2000
+      - ego vehicle with role_name sim_platform_ego exists
+      - vehicle pose changes after control input
+
+  perturbations: []
+
+  outputs:
+    record:
+      - runtime_logs
+      - selected_realisation
+      - selected_app
+      - experiment_result
+
+  tags:
+    - smoke_test
+    - carla
+    - urban_driving
+    - scripted

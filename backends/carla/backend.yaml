@@ -1,0 +1,95 @@
+apiVersion: sim.platform/v0.1
+kind: Backend
+
+metadata:
+  name: carla
+  description: >
+    CARLA backend for autonomous vehicle and urban driving simulation.
+
+spec:
+  runtime:
+    type: containerized
+    engine: carla
+    version: "0.9.16"
+
+  supports:
+    domains:
+      - av
+      - urban_driving
+      - perception
+
+    platformContracts:
+      - ackermann_vehicle
+      - ego_vehicle
+
+    observationContracts:
+      - odometry
+      - tf_tree
+      - rgb_camera
+      - depth_camera
+      - semantic_camera
+      - lidar3d
+      - radar
+      - gnss
+      - imu
+
+    features:
+      - client_server_runtime
+      - python_api
+      - ros_bridge_optional
+      - synchronous_mode
+      - fixed_timestep
+      - gui_rendering
+      - offscreen_rendering
+      - no_rendering
+
+  requires:
+    infrastructure:
+      - docker
+      - host_networking
+      - gpu
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=graphics,utility,display,video,compute
+
+    nixos:
+      - /run/opengl-driver mounted into container when rendering is enabled
+      - VK_ICD_FILENAMES=/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json
+
+  realisationModel:
+    worldFormat: carla_map
+    worldSelection: python_client_load_world
+    robotBinding: spawned_actor
+    observationRealisation: native_sensor_actor
+    controlRealisation: python_api_or_ros_bridge
+    processModel: multi_process
+
+  renderingModes:
+    - gui
+    - offscreen
+    - no_rendering
+
+  constraints:
+    notes:
+      - >
+        CARLA is a client/server simulator. The server process hosts the Unreal
+        simulation, while backend-local clients load maps, spawn actors, attach
+        sensors, and configure runtime behaviour.
+      - >
+        A CARLA realisation may require multiple processes: the CARLA server, a
+        scenario client, and optionally a ROS bridge.
+      - >
+        The CARLA Unreal window is a backend rendering mode, not an attachable
+        framework view client.
+      - >
+        On NixOS, rendering may require exposing the host NVIDIA Vulkan/OpenGL
+        stack from /run/opengl-driver and setting VK_ICD_FILENAMES explicitly.
+      - >
+        No-rendering mode is useful for control and traffic tests, but does not
+        provide rendered camera observations.
+
+  excludes:
+    domains:
+      - amr
+      - manipulation

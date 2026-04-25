@@ -45,16 +45,23 @@
         ];
       };
 
+      carla = import ./infra/nix/carla-python.nix {inherit pkgs;};
+
+      python = pkgs.python311.withPackages (ps: [
+        ps.pyyaml
+        carla.carlaPythonPkg
+      ]);
+
       simPlatform = pkgs.writeShellApplication {
         name = "sim-platform";
         runtimeInputs = [
-          pkgs.python3
-          pkgs.python3Packages.pyyaml
+          python
           pkgs.docker
           rosEnv
         ];
         text = ''
-          exec ${pkgs.python3}/bin/python ${self}/tools/sim_platform/sim_platform.py "$@"
+          export LD_LIBRARY_PATH="${carla.carlaLibPath}:''${LD_LIBRARY_PATH:-}"
+          exec ${python}/bin/python ${self}/tools/sim_platform/sim_platform.py "$@"
         '';
       };
     in {
@@ -66,8 +73,7 @@
 
           simPlatform
 
-          pkgs.python3
-          pkgs.python3Packages.pyyaml
+          python
 
           pkgs.docker
           pkgs.git

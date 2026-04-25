@@ -95,6 +95,8 @@ spec:
     launch:
       mode: headless_streaming
       command: backends/isaac/run.sh
+      args:
+        - /worlds/warehouse_teleop.usd
 
     infrastructure:
       containerised: true

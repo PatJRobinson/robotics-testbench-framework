@@ -1,0 +1,184 @@
+apiVersion: sim.platform/v0.1
+kind: Realisation
+
+metadata:
+  name: urban_teleop@carla
+  description: >
+    CARLA realisation of a minimal urban driving teleoperation scenario.
+    Launches a CARLA server, loads a town map through a backend-local scenario
+    client, spawns an ego vehicle, and exposes vehicle control/observation
+    interfaces for application-layer use.
+
+spec:
+  scenarioRef: urban_teleop
+  backendRef: carla
+  platformRef: ego_vehicle
+
+  provides:
+    platformContracts:
+      - ego_vehicle
+      - ackermann_vehicle
+
+    interfaceContracts:
+      commands:
+        - name: /vehicle/control
+          type: carla_msgs/msg/CarlaEgoVehicleControl
+          required: true
+
+      observations:
+        - name: /clock
+          type: rosgraph_msgs/msg/Clock
+          required: false
+
+        - name: /vehicle/odometry
+          type: nav_msgs/msg/Odometry
+          required: false
+
+        - name: /vehicle/imu
+          type: sensor_msgs/msg/Imu
+          required: false
+
+        - name: /vehicle/gnss
+          type: sensor_msgs/msg/NavSatFix
+          required: false
+
+        - name: /vehicle/camera/image_raw
+          type: sensor_msgs/msg/Image
+          required: false
+
+    observationContracts:
+      - odometry
+      - rgb_camera
+      - imu
+      - gnss
+
+  native:
+    world:
+      type: carla_map
+      mapName: Town01
+
+    platform:
+      type: carla_actor
+      roleName: sim_platform_ego
+      blueprintFilter: vehicle.*
+      spawn:
+        strategy: first_available_spawn_point
+
+    scenarioClient:
+      type: python_api
+      entrypoint: scenarios/urban_teleop/carla/start_realisation.py
+      responsibilities:
+        - connect_to_server
+        - load_world
+        - configure_synchronous_mode
+        - clean_previous_actors
+        - spawn_ego_vehicle
+        - attach_optional_sensors
+        - expose_or_prepare_contract_interfaces
+
+    sensors:
+      rgbCamera:
+        enabled: false
+        blueprint: sensor.camera.rgb
+        attachTo: sim_platform_ego
+      imu:
+        enabled: false
+        blueprint: sensor.other.imu
+        attachTo: sim_platform_ego
+      gnss:
+        enabled: false
+        blueprint: sensor.other.gnss
+        attachTo: sim_platform_ego
+
+  runtime:
+    containerName: carla-sim
+
+    processModel: multi_process
+
+    rendering:
+      mode: gui # gui | offscreen | no_rendering
+      frameworkManagedView: false
+
+    launch:
+      mode: server
+      command: backends/carla/run.sh
+      args:
+        - gui
+
+    readiness:
+      type: carla_rpc
+      host: localhost
+      port: 2000
+      timeoutSeconds: 120
+
+    processes:
+      - name: carla_server
+        type: docker
+        entrypoint: backends/carla/run.sh
+        args:
+          - "${native.world.mapName}"
+          - "${runtime.rendering.mode}"
+
+      - name: scenario_client
+        type: python
+        entrypoint: scenarios/urban_teleop/carla/start_realisation.py
+        after:
+          - carla_server
+        args:
+          - "--map"
+          - "${native.world.mapName}"
+          - "--role-name"
+          - "${native.platform.roleName}"
+
+    infrastructure:
+      containerized: true
+      networking: host
+      gpu: true
+
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: graphics,utility,display,video,compute
+      VK_ICD_FILENAMES: /run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json
+
+    mounts:
+      - hostPath: /run/opengl-driver
+        containerPath: /run/opengl-driver
+        mode: ro
+
+  lifecycle:
+    supports:
+      - start
+      - stop
+      - reset
+
+    resetSemantics:
+      description: >
+        Reset reloads the configured CARLA map, removes previous actors owned
+        by this realisation, respawns the ego vehicle, and reapplies scenario
+        settings.
+
+    cleanup:
+      actorRoleNames:
+        - sim_platform_ego
+
+  constraints:
+    knownIssues:
+      - >
+        CARLA readiness is not equivalent to the server process being alive.
+        The runtime should verify RPC responsiveness before launching dependent
+        clients.
+      - >
+        GUI mode launches a CARLA Unreal window as part of the backend process.
+        This is not an attachable framework view client.
+      - >
+        On NixOS, rendering requires the host NVIDIA OpenGL/Vulkan driver stack
+        to be mounted into the container.
+      - >
+        No-rendering mode is suitable for control tests but does not support
+        rendered camera observations.
+
+  tags:
+    - av
+    - urban_driving
+    - teleop
+    - carla
