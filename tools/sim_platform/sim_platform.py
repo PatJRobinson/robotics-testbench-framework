@@ -7,6 +7,7 @@ from pathlib import Path
 import time
 import yaml
 import os
+import sys
 
 root_env = os.environ.get("SIM_PLATFORM_ROOT")
 
@@ -65,7 +66,7 @@ def resolve_experiment(name: str) -> dict:
         "experiment_path": str(exp_path.relative_to(ROOT)),
         "app_ref": app_ref,
         "app_path": str(app_path.relative_to(ROOT)),
-        "app_entrypoint": app["spec"]["runtime"]["entrypoint"],
+        "app_runtime": app["spec"]["runtime"],
         "realisation_ref": realisation_ref,
         "realisation_path": str(realisation_path.relative_to(ROOT)),
         "backend_ref": realisation["spec"]["backendRef"],
@@ -73,6 +74,7 @@ def resolve_experiment(name: str) -> dict:
         "cmd_args": realisation["spec"]["runtime"]["launch"].get("args", []),
         "readiness": realisation["spec"]["runtime"].get("readiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
+        "processes": realisation["spec"]["runtime"].get("processes", []),
     }
 
 
@@ -155,48 +157,89 @@ def wait_for_readiness(readiness: dict) -> None:
     else:
         raise ValueError(f"Unknown readiness type: {readiness_type}")
 
-def run_experiment(name: str) -> None:
-    plan = resolve_experiment(name)
-    print_plan(plan)
-
-    backend_cmd = ROOT / plan["backend_launch"]
-    app_cmd = ROOT / plan["app_entrypoint"]
-
-    print("\nStarting backend:")
-    print(f"  {backend_cmd}")
-
-    log_path = ROOT / "runs" / plan["experiment_name"] / "backend.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
+def start_process(name: str, command: list[str], log_dir: Path) -> subprocess.Popen:
+    log_path = log_dir / f"{name}.log"
     log_file = log_path.open("w")
 
-    cmd_args = plan["cmd_args"]
-    print(f"Running process with command {backend_cmd} {cmd_args}")
+    print(f"[sim-platform] Starting {name}: {' '.join(command)}")
+    print(f"[sim-platform] {name} logs: {log_path}")
 
-    backend_proc = subprocess.Popen(
-        ["bash", str(backend_cmd), *plan["cmd_args"]],
+    return subprocess.Popen(
+        command,
         cwd=ROOT,
         stdout=log_file,
         stderr=subprocess.STDOUT,
     )
 
+def get_app_command(app_rt: dict) -> list[str]:
+    runtime_type = app_rt["type"]
+    app_cmd = ROOT / app_rt["entrypoint"]
+
+    if runtime_type == "python":
+        return [sys.executable, str(app_cmd)]
+
+    if runtime_type in ("shell", "bash", "nix_host", "ros2_node"):
+        return ["bash", str(app_cmd)]
+
+    raise ValueError(f"Unknown app runtime type: {runtime_type}")
+
+def run_experiment(name: str) -> None:
+    plan = resolve_experiment(name)
+    print_plan(plan)
+
+    run_dir = RUNS_DIR / plan["experiment_name"]
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    app_cmd = get_app_command(plan["app_runtime"])
+
+    processes = []
+
+    backend_cmd = ROOT / plan["backend_launch"]
+
+    backend_proc = start_process(
+        "backend",
+        ["bash", str(backend_cmd), *plan["cmd_args"]],
+        run_dir,
+    )
+    processes.append(backend_proc)
+
     try:
         wait_for_readiness(plan["readiness"])
 
-        print(f"[sim-platform] Backend logs: {log_path}")
+        for proc_spec in plan["processes"]:
+            entrypoint = ROOT / proc_spec["entrypoint"]
+            args = proc_spec.get("args", [])
+
+            ptype = proc_spec.get("type", "<missing>")
+            if ptype == "python":
+                proc = start_process(
+                    proc_spec["name"],
+                    ["python", str(entrypoint), *args],
+                    run_dir,
+                )
+                processes.append(proc)
+            else:
+                raise ValueError(f"Unknown process type: {ptype}")
 
         print("\nStarting app:")
-        print(f"  {app_cmd}")
-        subprocess.run([str(app_cmd)], cwd=ROOT, check=True)
-
-    finally:
-        print("\nStopping backend...")
-        backend_proc.terminate()
+        print(f"  {' '.join(app_cmd)}")
 
         subprocess.run(
-          ["docker", "rm", "-f", plan["container_name"]],
-          cwd=ROOT,
-          check=False,
+            app_cmd,
+            cwd=ROOT,
+            check=True,
+        )
+
+    finally:
+        print("\nStopping processes...")
+        for proc in reversed(processes):
+            if proc.poll() is None:
+                proc.terminate()
+
+        subprocess.run(
+            ["docker", "rm", "-f", plan["container_name"]],
+            cwd=ROOT,
+            check=False,
         )
 
 def main() -> None:

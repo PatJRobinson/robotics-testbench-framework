@@ -112,12 +112,12 @@ spec:
       timeoutSeconds: 120
 
     processes:
-      - name: carla_server
-        type: docker
-        entrypoint: backends/carla/run.sh
-        args:
-          - "${native.world.mapName}"
-          - "${runtime.rendering.mode}"
+      # - name: carla_server
+      #   type: docker
+      #   entrypoint: backends/carla/run.sh
+      #   args:
+      #     - "${native.world.mapName}"
+      #     - "${runtime.rendering.mode}"
 
       - name: scenario_client
         type: python
