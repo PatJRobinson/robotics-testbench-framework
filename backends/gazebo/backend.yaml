@@ -17,7 +17,7 @@ spec:
     domains:
       - amr
 
-    robotContracts:
+    platformContracts:
       - differential_drive
 
     observationContracts:
@@ -39,7 +39,7 @@ spec:
     environment:
       - ROS_DISTRO=jazzy
 
-  realizationModel:
+  realisationModel:
     worldFormat: sdf
     robotBinding: native_model_or_sdf_include
     observationRealization: native

@@ -17,7 +17,7 @@ spec:
       - amr
       - perception
 
-    robotContracts:
+    platformContracts:
       - differential_drive
 
     observationContracts:
@@ -45,7 +45,7 @@ spec:
       - FASTRTPS_DEFAULT_PROFILES_FILE
       - LD_LIBRARY_PATH+=/isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib
 
-  realizationModel:
+  realisationModel:
     worldFormat: usd
     robotBinding: native_asset_or_usd_reference
     observationRealization: native
@@ -57,7 +57,7 @@ spec:
       - >
         Docker-based ROS communication requires explicit Fast DDS profile setup.
       - >
-        A realization may depend on action graphs, enabled extensions, and
+        A realisation may depend on action graphs, enabled extensions, and
         backend-local runtime scripts.
 
   excludes:

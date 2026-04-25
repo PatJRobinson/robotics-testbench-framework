@@ -21,7 +21,7 @@ spec:
       dynamic_obstacles: false
 
   requires:
-    robotContracts:
+    platformContracts:
       - differential_drive
 
     interfaces:

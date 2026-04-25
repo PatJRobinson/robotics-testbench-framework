@@ -14,7 +14,7 @@ spec:
   robotRef: turtlebot_like
 
   provides:
-    robotContracts:
+    platformContracts:
       - differential_drive
 
     interfaceContracts:

@@ -11,7 +11,7 @@ spec:
   category: interactive_control
 
   requires:
-    robotContracts:
+    platformContracts:
       - differential_drive
 
     interfaceContracts:
