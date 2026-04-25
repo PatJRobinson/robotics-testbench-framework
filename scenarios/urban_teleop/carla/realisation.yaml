@@ -111,6 +111,10 @@ spec:
       port: 2000
       timeoutSeconds: 120
 
+    scenarioReadiness:
+      type: carla_actor
+      roleName: sim_platform_ego
+
     processes:
       # - name: carla_server
       #   type: docker
