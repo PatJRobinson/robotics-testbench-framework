@@ -125,10 +125,10 @@ spec:
         after:
           - carla_server
         args:
-          - "--map"
-          - "${native.world.mapName}"
-          - "--role-name"
-          - "${native.platform.roleName}"
+          - --map
+          - Town01
+          - --role-name
+          - sim_platform_ego
 
     infrastructure:
       containerized: true

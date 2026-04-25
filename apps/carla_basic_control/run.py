@@ -1,72 +1,73 @@
 #!/usr/bin/env python3
 
+import math
 import time
 import carla
-
 
 ROLE_NAME = "sim_platform_ego"
 
 
-def find_ego(world):
-    for actor in world.get_actors():
-        if actor.attributes.get("role_name") == ROLE_NAME:
-            return actor
-    return None
+def find_ego(world, role_name=ROLE_NAME, timeout=20.0):
+    start = time.time()
+
+    while time.time() - start < timeout:
+        for actor in world.get_actors().filter("vehicle.*"):
+            if actor.attributes.get("role_name") == role_name:
+                return actor
+
+        print(f"[app] waiting for ego role_name={role_name}")
+        time.sleep(0.5)
+
+    raise RuntimeError(f"Ego vehicle not found: role_name={role_name}")
 
 
-actors = []
+def dist_xy(a, b):
+    return math.hypot(b.x - a.x, b.y - a.y)
+
+def update_spectator(world, ego):
+    transform = ego.get_transform()
+
+    spectator = world.get_spectator()
+    spectator.set_transform(
+        carla.Transform(
+            transform.location + carla.Location(x=-0.0, z=4.0),
+            carla.Rotation(pitch=-20.0, yaw=transform.rotation.yaw),
+        )
+    )
 
 def main():
     print("[app] connecting to CARLA")
-
     client = carla.Client("localhost", 2000)
     client.set_timeout(10.0)
 
     world = client.get_world()
 
-    bp_lib = world.get_blueprint_library()
+    print("[app] finding ego vehicle")
+    ego = find_ego(world)
 
-    vehicle_bp = bp_lib.filter("vehicle.*")[0]
-    vehicle_bp.set_attribute("role_name", "sim_platform_ego")
+    update_spectator(world, ego)
 
-    spawn_point = world.get_map().get_spawn_points()[0]
-    vehicle = world.spawn_actor(vehicle_bp, spawn_point)
-    actors.append(vehicle)
+    start = ego.get_location()
+    print(f"[app] start: x={start.x:.2f}, y={start.y:.2f}, z={start.z:.2f}")
 
-    print("[app] searching for ego vehicle")
-    ego = None
+    print("[app] applying throttle")
+    ego.apply_control(carla.VehicleControl(throttle=0.45, steer=0.0, brake=0.0))
 
-    for _ in range(20):
-        ego = find_ego(world)
-        if ego:
-            break
-        time.sleep(0.5)
+    time.sleep(5.0)
 
-    if ego is None:
-        raise RuntimeError("Ego vehicle not found")
+    ego.apply_control(carla.VehicleControl(throttle=0.0, brake=1.0))
 
-    print(f"[app] found ego id={ego.id}")
+    end = ego.get_location()
+    moved = dist_xy(start, end)
 
-    start_loc = ego.get_location()
-    print(f"[app] start location: {start_loc}")
+    print(f"[app] end:   x={end.x:.2f}, y={end.y:.2f}, z={end.z:.2f}")
+    print(f"[app] moved: {moved:.2f} m")
 
-    print("[app] applying control")
-    ego.apply_control(carla.VehicleControl(throttle=0.4, steer=0.0))
+    if moved < 0.5:
+        raise RuntimeError(f"Vehicle did not move enough: {moved:.2f} m")
 
-    time.sleep(3)
+    print("[app] success")
 
-    end_loc = ego.get_location()
-    print(f"[app] end location: {end_loc}")
-
-    dx = end_loc.x - start_loc.x
-    dy = end_loc.y - start_loc.y
-
-    print(f"[app] delta: dx={dx:.2f}, dy={dy:.2f}")
-
-    if abs(dx) < 0.1 and abs(dy) < 0.1:
-        raise RuntimeError("Vehicle did not move")
-
-    print("[app] success: vehicle moved")
 
 if __name__ == "__main__":
     main()
