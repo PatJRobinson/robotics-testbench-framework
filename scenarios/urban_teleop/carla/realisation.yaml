@@ -111,6 +111,10 @@ spec:
       port: 2000
       timeoutSeconds: 120
 
+    scenarioReadiness:
+      type: carla_actor
+      roleName: sim_platform_ego
+
     processes:
       # - name: carla_server
       #   type: docker
@@ -125,10 +129,14 @@ spec:
         after:
           - carla_server
         args:
-          - "--map"
-          - "${native.world.mapName}"
-          - "--role-name"
-          - "${native.platform.roleName}"
+          - --map
+          - Town01
+          - --role-name
+          - sim_platform_ego
+
+      - name: ros_control_adapter
+        type: ros_python
+        entrypoint: scenarios/urban_teleop/carla/ros_control_adapter.py
 
     infrastructure:
       containerized: true

@@ -163,36 +163,25 @@ backend-native execution + contract-governed interfaces + ROS application logic
 
 ### CARLA on NixOS / Docker
 
-CARLA may require the host NVIDIA graphics stack to be mounted into the container:
+- Requires GPU + Docker
+- Uses CARLA 0.9.16 container
+- Python API packaged via Nix (Python 3.12)
 
+Run:
+  sim-platform run experiment carla_teleop_smoke
+
+On NixOS, CARLA may require the host NVIDIA graphics stack to be mounted into the container:
 - mount `/run/opengl-driver`
 - set `VK_ICD_FILENAMES=/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json`
 - set `NVIDIA_DRIVER_CAPABILITIES=graphics,utility,display,video,compute`
 
-Without this, CARLA may fall back to lavapipe/software Vulkan, causing freezes and very slow client calls.
+This is handled already in `backends/carla/run.sh` however should be tested on non-NixOS and non-NVIDIA machines
 
-Command dump:
-
-```
-docker run --rm -it \
-  --name carla-sim \
-  --device nvidia.com/gpu=all \
-  --net=host \
-  -e DISPLAY=$DISPLAY \
-  -e XDG_RUNTIME_DIR=/tmp \
-  -e SDL_VIDEODRIVER=x11 \
-  -e NVIDIA_VISIBLE_DEVICES=all \
-  -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -e NVIDIA_VISIBLE_DEVICES=all \
-  -e NVIDIA_DRIVER_CAPABILITIES=graphics,utility,display,video,compute \
-  -e VK_ICD_FILENAMES=/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json \
-  -v /run/opengl-driver:/run/opengl-driver:ro -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-  carlasim/carla:0.9.16 \
-  bash CarlaUE4.sh -nosound
-
-```
-
-^^ runs carla with gui on wayland + NVIDIA desktop
+Known Limitations:
+- `/cmd_vel` is a temporary control interface (not Ackermann)
+- ROS exposure currently via CARLA native ROS2 (not ros-bridge)
+- Topic naming slightly inconsistent (/carla//rgb/...)
+- No lifecycle sync between ROS and CARLA yet
 
 ### NVIDIA Isaac
 

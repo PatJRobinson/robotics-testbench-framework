@@ -47,7 +47,7 @@
 
       carla = import ./infra/nix/carla-python.nix {inherit pkgs;};
 
-      python = pkgs.python311.withPackages (ps: [
+      python = pkgs.python312.withPackages (ps: [
         ps.pyyaml
         carla.carlaPythonPkg
       ]);

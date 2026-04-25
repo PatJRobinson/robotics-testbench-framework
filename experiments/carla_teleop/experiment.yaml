@@ -10,7 +10,7 @@ metadata:
 spec:
   mode: scripted
 
-  appRef: carla_basic_control
+  appRef: carla_teleop
   realisationRef: urban_teleop@carla
 
   successCriteria:
@@ -18,15 +18,18 @@ spec:
       The CARLA server becomes reachable, the realisation spawns an ego vehicle,
       and the app applies control such that the vehicle pose changes.
     requires:
-      - CARLA RPC available on localhost:2000
-      - ego vehicle with role_name sim_platform_ego exists
-      - vehicle pose changes after control input
+      - carla_rpc_available
+      - scenario_client_started
+      - ego_vehicle_spawned
+      - app_applies_control
+      - ego_vehicle_pose_changes
 
   perturbations: []
 
   outputs:
     record:
-      - runtime_logs
+      - runs/carla_teleop_smoke/backend.log
+      - runs/carla_teleop_smoke/scenario_client.log
       - selected_realisation
       - selected_app
       - experiment_result

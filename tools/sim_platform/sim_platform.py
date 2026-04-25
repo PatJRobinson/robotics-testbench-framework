@@ -73,6 +73,7 @@ def resolve_experiment(name: str) -> dict:
         "backend_launch": realisation["spec"]["runtime"]["launch"]["command"],
         "cmd_args": realisation["spec"]["runtime"]["launch"].get("args", []),
         "readiness": realisation["spec"]["runtime"].get("readiness", {}),
+        "scenario_readiness": realisation["spec"]["runtime"].get("scenarioReadiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
         "processes": realisation["spec"]["runtime"].get("processes", []),
     }
@@ -135,6 +136,33 @@ def wait_for_carla_rpc(host: str, port: int, timeout: float = 120.0) -> None:
 
             time.sleep(1.0)
 
+def wait_for_carla_actor(role_name: str, timeout: float = 60.0):
+    import carla
+
+    print(f"[sim-platform] Waiting for CARLA actor: {role_name}")
+
+    client = carla.Client("localhost", 2000)
+    client.set_timeout(5.0)
+
+    start = time.time()
+
+    while True:
+        try:
+            world = client.get_world()
+
+            for actor in world.get_actors():
+                if actor.attributes.get("role_name") == role_name:
+                    print(f"[sim-platform] Actor ready: {role_name}")
+                    return
+
+        except Exception as e:
+            print(f"[sim-platform] actor check failed: {e}")
+
+        if time.time() - start > timeout:
+            raise RuntimeError(f"Timeout waiting for actor: {role_name}")
+
+        time.sleep(0.5)
+
 def wait_for_readiness(readiness: dict) -> None:
     if not readiness:
         return
@@ -157,6 +185,13 @@ def wait_for_readiness(readiness: dict) -> None:
     else:
         raise ValueError(f"Unknown readiness type: {readiness_type}")
 
+def wait_for_scenario_readiness(scenario_readiness: dict):
+    if scenario_readiness and scenario_readiness["type"] == "carla_actor":
+        wait_for_carla_actor(
+            scenario_readiness["roleName"],
+            timeout=scenario_readiness.get("timeoutSeconds", 60),
+        )
+
 def start_process(name: str, command: list[str], log_dir: Path) -> subprocess.Popen:
     log_path = log_dir / f"{name}.log"
     log_file = log_path.open("w")
@@ -171,6 +206,12 @@ def start_process(name: str, command: list[str], log_dir: Path) -> subprocess.Po
         stderr=subprocess.STDOUT,
     )
 
+def assert_processes_alive(processes: list[subprocess.Popen], names: list[str]) -> None:
+    for name, proc in zip(names, processes):
+        code = proc.poll()
+        if code is not None:
+            raise RuntimeError(f"Process exited early: {name} exit_code={code}")
+
 def get_app_command(app_rt: dict) -> list[str]:
     runtime_type = app_rt["type"]
     app_cmd = ROOT / app_rt["entrypoint"]
@@ -184,6 +225,8 @@ def get_app_command(app_rt: dict) -> list[str]:
     raise ValueError(f"Unknown app runtime type: {runtime_type}")
 
 def run_experiment(name: str) -> None:
+    succeeded = False
+
     plan = resolve_experiment(name)
     print_plan(plan)
 
@@ -193,6 +236,7 @@ def run_experiment(name: str) -> None:
     app_cmd = get_app_command(plan["app_runtime"])
 
     processes = []
+    process_names = []
 
     backend_cmd = ROOT / plan["backend_launch"]
 
@@ -202,9 +246,11 @@ def run_experiment(name: str) -> None:
         run_dir,
     )
     processes.append(backend_proc)
+    process_names.append("backend")
 
     try:
         wait_for_readiness(plan["readiness"])
+        assert_processes_alive(processes, process_names)
 
         for proc_spec in plan["processes"]:
             entrypoint = ROOT / proc_spec["entrypoint"]
@@ -218,17 +264,42 @@ def run_experiment(name: str) -> None:
                     run_dir,
                 )
                 processes.append(proc)
+                process_names.append(proc_spec["name"])
+            elif ptype == "ros_python":
+                proc = start_process(
+                    proc_spec["name"],
+                    ["python", str(entrypoint), *args],
+                    run_dir,
+                )
+                processes.append(proc)
+                process_names.append(proc_spec["name"])
             else:
                 raise ValueError(f"Unknown process type: {ptype}")
+
+        assert_processes_alive(processes, process_names)
+
+        wait_for_scenario_readiness(plan.get("scenario_readiness"))
+
+        assert_processes_alive(processes, process_names)
 
         print("\nStarting app:")
         print(f"  {' '.join(app_cmd)}")
 
-        subprocess.run(
-            app_cmd,
-            cwd=ROOT,
-            check=True,
-        )
+        interactive = plan["app_runtime"].get("interactive", False)
+
+        if interactive:
+            app_exit = subprocess.run(app_cmd, cwd=ROOT).returncode
+        else:
+            app_proc = start_process("app", app_cmd, run_dir)
+            processes.append(app_proc)
+            process_names.append("app")
+            app_exit = app_proc.wait()
+
+        if app_exit != 0:
+            raise RuntimeError(f"App exited with non-zero code: {app_exit}")
+
+        succeeded = True
+        print("[sim-platform] experiment succeeded")
 
     finally:
         print("\nStopping processes...")
@@ -241,6 +312,9 @@ def run_experiment(name: str) -> None:
             cwd=ROOT,
             check=False,
         )
+
+        if not succeeded:
+            print("[sim-platform] experiment failed")
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="sim-platform")
