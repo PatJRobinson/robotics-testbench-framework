@@ -24,17 +24,6 @@ def find_ego(world, role_name=ROLE_NAME, timeout=20.0):
 def dist_xy(a, b):
     return math.hypot(b.x - a.x, b.y - a.y)
 
-def update_spectator(world, ego):
-    transform = ego.get_transform()
-
-    spectator = world.get_spectator()
-    spectator.set_transform(
-        carla.Transform(
-            transform.location + carla.Location(x=-0.0, z=4.0),
-            carla.Rotation(pitch=-20.0, yaw=transform.rotation.yaw),
-        )
-    )
-
 def main():
     print("[app] connecting to CARLA")
     client = carla.Client("localhost", 2000)
@@ -44,8 +33,6 @@ def main():
 
     print("[app] finding ego vehicle")
     ego = find_ego(world)
-
-    update_spectator(world, ego)
 
     start = ego.get_location()
     print(f"[app] start: x={start.x:.2f}, y={start.y:.2f}, z={start.z:.2f}")

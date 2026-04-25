@@ -134,6 +134,10 @@ spec:
           - --role-name
           - sim_platform_ego
 
+      - name: ros_control_adapter
+        type: ros_python
+        entrypoint: scenarios/urban_teleop/carla/ros_control_adapter.py
+
     infrastructure:
       containerized: true
       networking: host

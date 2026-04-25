@@ -1,0 +1,28 @@
+apiVersion: sim.platform/v0.1
+kind: App
+
+metadata:
+  name: carla_teleop
+  description: >
+    ROS-based teleoperation app for CARLA via the /cmd_vel contract.
+
+spec:
+  runtime:
+    type: shell
+    entrypoint: apps/carla_teleop/run.sh
+    interactive: true
+
+  requires:
+    interfaceContracts:
+      commands:
+        - name: /cmd_vel
+          type: geometry_msgs/msg/Twist
+
+  behaviour:
+    mode: interactive
+
+  tags:
+    - carla
+    - ros2
+    - teleop
+    - cmd_vel

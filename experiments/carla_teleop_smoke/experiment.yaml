@@ -10,7 +10,7 @@ metadata:
 spec:
   mode: scripted
 
-  appRef: carla_basic_control
+  appRef: carla_teleop
   realisationRef: urban_teleop@carla
 
   successCriteria:

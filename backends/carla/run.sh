@@ -37,4 +37,4 @@ docker run --rm \
   -v /run/opengl-driver:/run/opengl-driver:ro \
   "${DISPLAY_ARGS[@]}" \
   carlasim/carla:0.9.16 \
-  bash CarlaUE4.sh $RENDER_FLAGS
+  bash CarlaUE4.sh $RENDER_FLAGS --ros2

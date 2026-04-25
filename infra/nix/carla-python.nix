@@ -1,21 +1,23 @@
 {pkgs}: let
+  pyPkgs = pkgs.python312Packages;
+
   carlaLibPath = pkgs.lib.makeLibraryPath [
     pkgs.zlib
     pkgs.stdenv.cc.cc.lib
   ];
 
-  carlaPythonPkg = pkgs.python311Packages.buildPythonPackage rec {
+  carlaPythonPkg = pyPkgs.buildPythonPackage rec {
     pname = "carla";
     version = "0.9.16";
     format = "wheel";
 
     src = pkgs.fetchPypi {
       inherit pname version format;
-      dist = "cp311";
-      python = "cp311";
-      abi = "cp311";
+      dist = "cp312";
+      python = "cp312";
+      abi = "cp312";
       platform = "manylinux_2_31_x86_64";
-      hash = "sha256-nKHgeTpfRTN1qLyT2F1DzFYpszQrr+EKuOux70+xEdw=";
+      hash = "sha256-wyOnsfitOsgc+sefXZbJysivptCnaPov/6RrszaUXE8=";
     };
 
     nativeBuildInputs = [
@@ -29,7 +31,7 @@
     ];
 
     postInstall = ''
-      libDir=$(dirname $(find $out -name 'libwebp-702eed9c.so.6.0.2' | head -n1))
+      libDir=$(dirname $(find $out -name 'libwebp-*.so*' | head -n1))
 
       for so in $(find $out -name '*.so'); do
         patchelf --set-rpath "$libDir:${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib" "$so" || true
@@ -39,7 +41,8 @@
     doCheck = false;
   };
 
-  python = pkgs.python311.withPackages (ps: [
+  python = pkgs.python312.withPackages (ps: [
+    ps.pyyaml
     carlaPythonPkg
   ]);
 in {

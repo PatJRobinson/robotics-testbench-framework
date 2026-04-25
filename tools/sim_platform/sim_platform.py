@@ -265,6 +265,14 @@ def run_experiment(name: str) -> None:
                 )
                 processes.append(proc)
                 process_names.append(proc_spec["name"])
+            elif ptype == "ros_python":
+                proc = start_process(
+                    proc_spec["name"],
+                    ["python", str(entrypoint), *args],
+                    run_dir,
+                )
+                processes.append(proc)
+                process_names.append(proc_spec["name"])
             else:
                 raise ValueError(f"Unknown process type: {ptype}")
 
@@ -277,11 +285,15 @@ def run_experiment(name: str) -> None:
         print("\nStarting app:")
         print(f"  {' '.join(app_cmd)}")
 
-        app_proc = start_process("app", app_cmd, run_dir)
-        processes.append(app_proc)
-        process_names.append("app")
+        interactive = plan["app_runtime"].get("interactive", False)
 
-        app_exit = app_proc.wait()
+        if interactive:
+            app_exit = subprocess.run(app_cmd, cwd=ROOT).returncode
+        else:
+            app_proc = start_process("app", app_cmd, run_dir)
+            processes.append(app_proc)
+            process_names.append("app")
+            app_exit = app_proc.wait()
 
         if app_exit != 0:
             raise RuntimeError(f"App exited with non-zero code: {app_exit}")
