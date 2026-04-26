@@ -12,6 +12,7 @@ type: software
 
 repository-code: "https://github.com/patjrobinson/robotics-testbench-framework"
 license: "BSD-3-Clause"
+date-released: 2026-04-26
 
 keywords:
 
