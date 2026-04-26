@@ -1,4 +1,4 @@
-# Simulation Platform (WIP)
+# Robotics Testbench Framework (WIP)
 
 ## Overview
 
@@ -12,6 +12,26 @@ This repository is an experimental but increasingly structured **robotics simula
 This is both:
 - a **practical engineering system** for demos (AMR, AV, etc.)
 - a **research platform** supporting PhD work on system architecture, abstraction, and integration
+
+---
+
+## Citation
+
+If you use the Robotics Testbench Framework in academic work, please cite it:
+
+**BibTeX (preferred):**
+@software{robinson_robotics_testbench_framework_2026,
+author = {Robinson, Patrick J.},
+title = {Robotics Testbench Framework},
+year = {2026},
+url = {https://github.com/patjrobinson/robotics-testbench-framework}
+}
+
+**APA style:**
+Robinson, P. J. (2026). *Robotics Testbench Framework* (Version X.X.X) [Computer software].
+https://github.com/patjrobinson/robotics-testbench-framework
+
+If a DOI or accompanying paper is available, please cite that instead.
 
 ---
 
