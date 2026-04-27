@@ -115,10 +115,10 @@ A contract is a **named expectation** about semantics and representation.
 
 Examples:
 
-differential_drive_cmd_vel  
-ackermann_vehicle_control  
-rgb_camera  
-sim_clock
+`differential_drive_cmd_vel`
+`ackermann_vehicle_control`
+`rgb_camera`
+`sim_clock`
 
 A contract defines:
 
@@ -136,11 +136,13 @@ A binding is how a realisation exposes a contract.
 
 Example:
 
+```
 contract: differential_drive_cmd_vel  
 binding:  
   type: ros_topic  
   name: /cmd_vel  
   messageType: geometry_msgs/msg/Twist
+```
 
 Bindings define:
 
@@ -154,17 +156,21 @@ Bindings define:
 
 Bindings may be partially configurable.
 
+```
 binding:  
   type: ros_topic  
   messageType: geometry_msgs/msg/Twist  
   defaultName: /cmd_vel  
   configurable:  
     - name
+```
 
 Applications provide:
 
+```
 bindingConfig:  
   name: /robot1/cmd_vel
+```
 
 Rule:
 
@@ -256,10 +262,10 @@ How sensors are implemented:
 
 Stable observation surfaces:
 
-rgb_camera  
-odometry  
-imu  
-sim_clock
+`rgb_camera`
+`odometry`
+`imu`
+`sim_clock`
 
 ---
 
@@ -311,14 +317,16 @@ They:
 
 Example:
 
-/cmd_vel → VehicleControl is approximate, not equivalent
+`/cmd_vel` → VehicleControl is approximate, not equivalent
 
 Adapters should declare:
 
+```
 kind: binding | semantic  
 provides: ...  
 consumes: ...  
 limitations: ...
+```
 
 ---
 
@@ -336,8 +344,8 @@ Backend-native implementation
 
 Examples:
 
-warehouse_teleop@isaac  
-urban_teleop@carla
+`warehouse_teleop@isaac`
+`urban_teleop@carla`
 
 ---
 
@@ -345,8 +353,8 @@ urban_teleop@carla
 
 Platforms are defined by contracts:
 
-differential_drive  
-ackermann_vehicle
+`differential_drive`
+`ackermann_vehicle`
 
 A realisation provides platform contracts.
 
