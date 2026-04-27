@@ -1,3 +1,4 @@
 runs/
 *.env.sh
-
+.direnv/
+.envrc

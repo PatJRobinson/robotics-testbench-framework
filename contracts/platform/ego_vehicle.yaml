@@ -1,0 +1,20 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: ego_vehicle
+  description: >
+    Platform contract for the primary controllable vehicle or robot in a
+    scenario.
+
+spec:
+  contractType: platform
+
+  semantics:
+    role: primary_agent
+    controllable: true
+
+  notes:
+    - >
+      This identifies the main embodied platform for an experiment. It does not
+      by itself specify vehicle kinematics.

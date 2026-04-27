@@ -1,0 +1,28 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: differential_drive_cmd_vel
+  description: >
+    Command contract for differential-drive style velocity control using
+    geometry_msgs/msg/Twist semantics.
+
+spec:
+  contractType: command
+
+  representation:
+    class: ros_topic
+    messageType: geometry_msgs/msg/Twist
+    fields:
+      linear.x:
+        meaning: forward linear velocity command
+      angular.z:
+        meaning: yaw rate command
+
+  intendedPlatforms:
+    - differential_drive_robot
+
+  notes:
+    - >
+      This contract is not semantically equivalent to Ackermann vehicle control.
+      Any use with CARLA-style vehicles should be marked as a semantic adapter.

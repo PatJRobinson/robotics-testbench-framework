@@ -1,0 +1,22 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: sim_clock
+  description: >
+    Observation contract for simulation time publication.
+
+spec:
+  contractType: observation
+
+  representation:
+    class: ros_topic
+    messageType: rosgraph_msgs/msg/Clock
+
+  semantics:
+    timeBase: simulation_time
+
+  notes:
+    - >
+      Presence of this contract means simulation time is externally visible.
+      It does not imply that a scenario or actor is ready.
