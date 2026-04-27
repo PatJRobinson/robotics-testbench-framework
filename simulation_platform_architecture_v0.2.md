@@ -128,6 +128,38 @@ A contract defines:
 
 A contract does **not** imply identical backend implementations.
 
+## Contract Resolution Trace
+
+The runtime does not only validate whether an experiment composition is valid. It also records why it is valid.
+
+During resolution, `sim-platform` computes:
+
+- required contracts from the app
+- provided contracts from the selected realisation
+- whether each requirement is satisfied directly or through an adapter
+- resolved bindings after applying app `bindingConfig`
+
+This information is exposed through:
+
+```bash
+sim-platform explain experiment <name>
+```
+
+and written to:
+
+`runs/<experiment>/metadata.yaml`
+
+Example:
+```
+Required commands:
+- differential_drive_cmd_vel
+  satisfied: adapter cmd_vel_to_vehicle_control
+  adapter kind: semantic
+  resolved binding: /cmd_vel
+```
+
+This makes adapter-mediated compatibility inspectable rather than implicit.
+
 ---
 
 ### 4.2 Bindings
