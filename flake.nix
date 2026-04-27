@@ -49,7 +49,6 @@
 
       python = pkgs.python312.withPackages (ps: [
         ps.pyyaml
-        ps.pytest
         carla.carlaPythonPkg
       ]);
 
@@ -85,7 +84,7 @@
           export FASTRTPS_DEFAULT_PROFILES_FILE="$PWD/infra/dds-cfg/fastdds.xml"
           export SIM_PLATFORM_ROOT="$PWD"
           export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
-          export PYTHONPATH="$PWD" PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests
+          export PYTHONPATH="$PWD:''${PYTHONPATH:-}"
 
           generate_env_file() {
             env | grep -E '^(PATH|LD_LIBRARY_PATH|PYTHONPATH|AMENT|COLCON|ROS_|RMW|GZ_|FASTRTPS_)=' \
