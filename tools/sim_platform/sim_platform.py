@@ -177,6 +177,7 @@ def validate_binding_config(app: dict, realisation: dict) -> list[dict]:
                 "contract": contract,
                 "binding": binding,
                 "bindingConfig": binding_config,
+                "resolved": resolve_binding(binding, binding_config),
             })
 
     print("[sim-platform] Binding config validation passed")
@@ -251,6 +252,19 @@ def satisfaction_trace(app: dict, realisation: dict) -> list[dict]:
                 })
 
     return trace
+
+def resolve_binding(binding: dict, binding_config: dict) -> dict:
+    resolved = {}
+
+    if "defaultName" in binding:
+        resolved["name"] = binding["defaultName"]
+
+    if "defaultTopics" in binding:
+        resolved["topics"] = binding["defaultTopics"]
+
+    resolved.update(binding_config or {})
+
+    return resolved
 
 def resolve_experiment(name: str) -> dict:
     exp_path = find_experiment(name)
