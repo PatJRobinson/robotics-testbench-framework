@@ -1,9 +1,9 @@
-apiVersion: sim.platform/v0.1
+apiVersion: sim.platform/v0.2
 kind: Realisation
 
 metadata:
   name: warehouse_teleop@isaac
-  contractVersion: v0.1
+  contractVersion: v0.2
   description: >
     Isaac Sim realisation of the warehouse_teleop scenario using a
     turtlebot-like differential-drive robot in a small warehouse stage.
@@ -15,35 +15,46 @@ spec:
 
   provides:
     platformContracts:
-      - differential_drive
+      - differential_drive_robot
 
-    interfaceContracts:
-      commands:
-        - name: /cmd_vel
-          type: geometry_msgs/msg/Twist
-          required: true
+    commands:
+      - contract: differential_drive_cmd_vel
+        binding:
+          type: ros_topic
+          defaultName: /cmd_vel
+          configurable:
+            - name
 
-      observations:
-        - name: /clock
-          type: rosgraph_msgs/msg/Clock
-          required: true
+    observations:
+      - contract: sim_clock
+        binding:
+          type: ros_topic
+          defaultName: /clock
+          configurable: []
 
-        - name: /odom
-          type: nav_msgs/msg/Odometry
-          required: false
+      - contract: odometry
+        binding:
+          type: ros_topic
+          defaultName: /odom
+          configurable:
+            - name
+        required: false
 
-        - name: /tf
-          type: tf2_msgs/msg/TFMessage
-          required: false
+      - contract: tf_tree
+        binding:
+          type: ros_topic
+          defaultName: /tf
+          configurable:
+            - name
+        required: false
 
-        - name: /scan
-          type: sensor_msgs/msg/LaserScan
-          required: false
-
-    observationContracts:
-      - sim_clock
-      - odometry
-      - tf_tree
+      - contract: lidar2d
+        binding:
+          type: ros_topic
+          defaultName: /scan
+          configurable:
+            - name
+        required: false
 
   native:
     world:

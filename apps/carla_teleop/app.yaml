@@ -13,6 +13,9 @@ spec:
     interactive: true
 
   requires:
+    platforms:
+      - contract: ackermann_vehicle
+
     commands:
       - contract: differential_drive_cmd_vel
         bindingConfig:

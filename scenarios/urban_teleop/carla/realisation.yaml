@@ -33,18 +33,17 @@ spec:
       - contract: sim_clock
         binding:
           type: ros_topic
-          name: /clock
-          messageType: rosgraph_msgs/msg/Clock
+          defaultName: /clock
+          configurable: []
 
       - contract: rgb_camera
         binding:
           type: ros_topic
-          topics:
+          defaultTopics:
             image: /carla//rgb/image
             cameraInfo: /carla//rgb/camera_info
-          messageTypes:
-            image: sensor_msgs/msg/Image
-            cameraInfo: sensor_msgs/msg/CameraInfo
+          configurable:
+            - rosName
         notes:
           - >
             Exposed through CARLA native ROS 2 sensor support. Topic naming is
