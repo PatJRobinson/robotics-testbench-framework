@@ -28,6 +28,9 @@ spec:
       - contract: tf_tree
       - contract: lidar2d
 
+  behaviour:
+    mode: interactive
+
   provides:
     behaviours:
       - manual_velocity_control
@@ -35,6 +38,7 @@ spec:
   runtime:
     type: ros2_node
     entrypoint: apps/amr_teleop/run.sh
+    interactive: true
 
   lifecycle:
     supports:
