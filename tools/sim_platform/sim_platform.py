@@ -197,6 +197,61 @@ def write_run_metadata(plan: dict, run_dir: Path) -> None:
 
     print(f"[sim-platform] Run metadata: {metadata_path}")
 
+def satisfaction_trace(app: dict, realisation: dict) -> list[dict]:
+    requires = app["spec"].get("requires", {})
+    provides = realisation["spec"].get("provides", {})
+
+    trace = []
+
+    for kind in ("platforms", "commands", "observations"):
+        direct_entries = provides.get(kind, []) or []
+
+        adapter_entries = []
+        for adapter in provides.get("adapters", []) or []:
+            adapter_provides = adapter.get("provides", {})
+            for entry in adapter_provides.get(kind, []) or []:
+                adapter_entries.append((adapter, entry))
+
+        for required in requires.get(kind, []) or []:
+            contract = required.get("contract")
+            if not contract:
+                continue
+
+            direct_match = next(
+                (entry for entry in direct_entries if entry.get("contract") == contract),
+                None,
+            )
+
+            if direct_match:
+                trace.append({
+                    "kind": kind,
+                    "contract": contract,
+                    "satisfiedBy": "direct",
+                    "provider": "realisation",
+                })
+                continue
+
+            adapter_match = next(
+                (
+                    (adapter, entry)
+                    for adapter, entry in adapter_entries
+                    if entry.get("contract") == contract
+                ),
+                None,
+            )
+
+            if adapter_match:
+                adapter, _entry = adapter_match
+                trace.append({
+                    "kind": kind,
+                    "contract": contract,
+                    "satisfiedBy": "adapter",
+                    "adapter": adapter.get("name"),
+                    "adapterKind": adapter.get("kind"),
+                })
+
+    return trace
+
 def resolve_experiment(name: str) -> dict:
     exp_path = find_experiment(name)
     exp = load_yaml(exp_path)
@@ -217,6 +272,8 @@ def resolve_experiment(name: str) -> dict:
     required = required_contracts(app)
     provided = provided_contracts(realisation)
 
+    trace = satisfaction_trace(app, realisation)
+
     return {
         "experiment_name": name,
         "experiment_path": str(exp_path.relative_to(ROOT)),
@@ -235,6 +292,7 @@ def resolve_experiment(name: str) -> dict:
         "contracts": {
             "required": {k: sorted(v) for k, v in required.items()},
             "provided": {k: sorted(v) for k, v in provided.items()},
+            "satisfactionTrace": trace,
             "resolvedBindings": resolved_bindings,
         },
     }
