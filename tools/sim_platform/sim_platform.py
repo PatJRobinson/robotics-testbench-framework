@@ -188,9 +188,7 @@ def write_run_metadata(plan: dict, run_dir: Path) -> None:
         "app": plan["app_ref"],
         "realisation": plan["realisation_ref"],
         "backend": plan["backend_ref"],
-        "contracts": {
-            "resolvedBindings": plan.get("resolved_bindings", []),
-        },
+        "contracts": plan.get("contracts", {}),
     }
 
     metadata_path = run_dir / "metadata.yaml"
@@ -216,6 +214,9 @@ def resolve_experiment(name: str) -> dict:
     validate_contracts(app, realisation)
     resolved_bindings = validate_binding_config(app, realisation)
 
+    required = required_contracts(app)
+    provided = provided_contracts(realisation)
+
     return {
         "experiment_name": name,
         "experiment_path": str(exp_path.relative_to(ROOT)),
@@ -231,6 +232,11 @@ def resolve_experiment(name: str) -> dict:
         "scenario_readiness": realisation["spec"]["runtime"].get("scenarioReadiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
         "processes": realisation["spec"]["runtime"].get("processes", []),
+        "contracts": {
+            "required": {k: sorted(v) for k, v in required.items()},
+            "provided": {k: sorted(v) for k, v in provided.items()},
+            "resolvedBindings": resolved_bindings,
+        },
     }
 
 
