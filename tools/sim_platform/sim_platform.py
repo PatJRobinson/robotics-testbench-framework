@@ -18,11 +18,31 @@ if root_env is None:
 
 ROOT = Path(root_env).resolve()
 RUNS_DIR = Path(os.environ.get("SIM_PLATFORM_RUNS_DIR", ROOT / "runs")).resolve()
+SCHEMAS = {
+    "App": ROOT / "schemas" / "app.schema.json",
+    "Realisation": ROOT / "schemas" / "realisation.schema.json",
+    "Contract": ROOT / "schemas" / "contract.schema.json",
+}
 
 def load_yaml(path: Path) -> dict:
     with path.open("r") as f:
         return yaml.safe_load(f)
 
+def validate_yaml_file(path: Path) -> None:
+    import json
+    import jsonschema
+
+    doc = load_yaml(path)
+    kind = doc.get("kind")
+
+    if kind not in SCHEMAS:
+        print(f"[sim-platform] No schema for kind={kind}: {path}")
+        return
+
+    schema = json.loads(SCHEMAS[kind].read_text())
+    jsonschema.validate(instance=doc, schema=schema)
+
+    print(f"[sim-platform] Schema valid: {path}")
 
 def find_experiment(name: str) -> Path:
     path = ROOT / "experiments" / name / "experiment.yaml"
@@ -465,6 +485,9 @@ def main() -> None:
     run.add_argument("kind", choices=["experiment"])
     run.add_argument("name")
 
+    validate = sub.add_parser("validate")
+    validate.add_argument("paths", nargs="*")
+
     args = parser.parse_args()
 
     if args.command == "resolve":
@@ -474,6 +497,16 @@ def main() -> None:
     elif args.command == "run":
         run_experiment(args.name)
 
+    elif args.command == "validate":
+        paths = [Path(p) for p in args.paths]
+
+        if not paths:
+            paths = list((ROOT / "apps").glob("*/app.yaml")) \
+            + list((ROOT / "scenarios").rglob("realisation.yaml")) \
+            + list((ROOT / "contracts").rglob("*.yaml"))
+
+        for path in paths:
+            validate_yaml_file(path)
 
 if __name__ == "__main__":
     main()
