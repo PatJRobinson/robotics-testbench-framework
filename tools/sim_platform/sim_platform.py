@@ -551,6 +551,56 @@ def run_experiment(name: str) -> None:
         if not succeeded:
             print("[sim-platform] experiment failed")
 
+def print_explanation(plan: dict) -> None:
+    contracts = plan["contracts"]
+    trace = contracts.get("satisfactionTrace", [])
+    bindings = contracts.get("resolvedBindings", [])
+
+    print(f"Experiment: {plan['experiment_name']}")
+    print(f"App: {plan['app_ref']}")
+    print(f"Realisation: {plan['realisation_ref']}")
+    print(f"Backend: {plan['backend_ref']}")
+    print()
+
+    for kind in ("platforms", "commands", "observations"):
+        entries = [t for t in trace if t["kind"] == kind]
+        if not entries:
+            continue
+
+        print(f"Required {kind}:")
+        for entry in entries:
+            contract = entry["contract"]
+            print(f"- {contract}")
+
+            if entry["satisfiedBy"] == "direct":
+                print("  satisfied: direct")
+            elif entry["satisfiedBy"] == "adapter":
+                print(f"  satisfied: adapter {entry.get('adapter')}")
+                print(f"  adapter kind: {entry.get('adapterKind')}")
+
+            binding = next(
+                (
+                    b for b in bindings
+                    if b["kind"] == kind and b["contract"] == contract
+                ),
+                None,
+            )
+
+            if binding:
+                resolved = binding.get("resolved", {})
+                if "name" in resolved:
+                    print(f"  resolved binding: {resolved['name']}")
+                elif "topics" in resolved:
+                    print("  resolved topics:")
+                    for topic_name, topic in resolved["topics"].items():
+                        print(f"    {topic_name}: {topic}")
+
+        print()
+
+def explain_experiment(name: str):
+    plan = resolve_experiment(name)
+    print_explanation(plan)
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="sim-platform")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -565,6 +615,10 @@ def main() -> None:
 
     validate = sub.add_parser("validate")
     validate.add_argument("paths", nargs="*")
+
+    explain_parser = sub.add_parser("explain")
+    explain_parser.add_argument("kind", choices=["experiment"])
+    explain_parser.add_argument("name")
 
     args = parser.parse_args()
 
@@ -585,6 +639,9 @@ def main() -> None:
 
         for path in paths:
             validate_yaml_file(path)
+
+    elif args.command == "explain":
+        explain_experiment(args.name)
 
 if __name__ == "__main__":
     main()
