@@ -14,8 +14,8 @@ spec:
   robotRef: turtlebot_like
 
   provides:
-    platformContracts:
-      - differential_drive_robot
+    platforms:
+      - contract: differential_drive_robot
 
     commands:
       - contract: differential_drive_cmd_vel

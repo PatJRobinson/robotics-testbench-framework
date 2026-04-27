@@ -46,6 +46,62 @@ def find_realisation(name: str) -> Path:
         raise FileNotFoundError(f"Realisation not found: {path}")
     return path
 
+def contract_names(entries: list[dict]) -> set[str]:
+    return {
+        entry["contract"]
+        for entry in entries or []
+        if isinstance(entry, dict) and "contract" in entry
+    }
+
+
+def provided_contracts(realisation: dict) -> dict[str, set[str]]:
+    provides = realisation["spec"].get("provides", {})
+
+    provided = {
+        "platforms": contract_names(provides.get("platforms", [])),
+        "commands": contract_names(provides.get("commands", [])),
+        "observations": contract_names(provides.get("observations", [])),
+    }
+
+    for adapter in provides.get("adapters", []):
+        adapter_provides = adapter.get("provides", {})
+        provided["commands"] |= contract_names(adapter_provides.get("commands", []))
+        provided["observations"] |= contract_names(adapter_provides.get("observations", []))
+        provided["platforms"] |= contract_names(adapter_provides.get("platforms", []))
+
+    return provided
+
+
+def required_contracts(app: dict) -> dict[str, set[str]]:
+    requires = app["spec"].get("requires", {})
+
+    return {
+        "platforms": contract_names(requires.get("platforms", [])),
+        "commands": contract_names(requires.get("commands", [])),
+        "observations": contract_names(requires.get("observations", [])),
+    }
+
+
+def validate_contracts(app: dict, realisation: dict) -> None:
+    required = required_contracts(app)
+    provided = provided_contracts(realisation)
+
+    missing = {
+        kind: sorted(required[kind] - provided[kind])
+        for kind in required
+        if required[kind] - provided[kind]
+    }
+
+    if missing:
+        lines = ["Contract validation failed:"]
+        for kind, names in missing.items():
+            lines.append(f"  missing {kind}: {', '.join(names)}")
+        lines.append("")
+        lines.append(f"  required: {required}")
+        lines.append(f"  provided: {provided}")
+        raise RuntimeError("\n".join(lines))
+
+    print("[sim-platform] Contract validation passed")
 
 def resolve_experiment(name: str) -> dict:
     exp_path = find_experiment(name)
@@ -60,6 +116,8 @@ def resolve_experiment(name: str) -> dict:
 
     app = load_yaml(app_path)
     realisation = load_yaml(realisation_path)
+
+    validate_contracts(app, realisation)
 
     return {
         "experiment_name": name,

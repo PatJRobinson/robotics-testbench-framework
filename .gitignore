@@ -2,3 +2,6 @@ runs/
 *.env.sh
 .direnv/
 .envrc
+__pycache__/
+*.pyc
+.pytest_cache/

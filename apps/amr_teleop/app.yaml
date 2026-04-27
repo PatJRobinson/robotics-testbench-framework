@@ -12,7 +12,7 @@ spec:
 
   requires:
     platforms:
-      - differential_drive_robot
+      - contract: differential_drive_robot
 
     commands:
       - contract: differential_drive_cmd_vel
