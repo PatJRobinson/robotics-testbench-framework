@@ -84,6 +84,7 @@
           export FASTRTPS_DEFAULT_PROFILES_FILE="$PWD/infra/dds-cfg/fastdds.xml"
           export SIM_PLATFORM_ROOT="$PWD"
           export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
+          export PYTHONPATH="$PWD:''${PYTHONPATH:-}"
 
           generate_env_file() {
             env | grep -E '^(PATH|LD_LIBRARY_PATH|PYTHONPATH|AMENT|COLCON|ROS_|RMW|GZ_|FASTRTPS_)=' \
@@ -106,5 +107,22 @@
           echo ""
         '';
       };
+
+      checks.contract-validation =
+        pkgs.runCommand "contract-validation-tests" {
+          nativeBuildInputs = [
+            python
+          ];
+        } ''
+          export PYTHONPATH="${self}"
+          export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+          export SIM_PLATFORM_ROOT="$PWD"
+          export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
+
+          cd ${self}
+          pytest tests
+
+          touch $out
+        '';
     });
 }

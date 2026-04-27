@@ -1,0 +1,30 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: rgb_camera
+  description: >
+    Observation contract for RGB image output with optional camera calibration
+    metadata.
+
+spec:
+  contractType: observation
+
+  representation:
+    class: ros_topics
+    required:
+      image:
+        messageType: sensor_msgs/msg/Image
+    optional:
+      cameraInfo:
+        messageType: sensor_msgs/msg/CameraInfo
+
+  semantics:
+    modality: rgb_image
+    dimensionality: 2d
+    timeStamped: true
+
+  notes:
+    - >
+      Concrete topic names, frame identifiers, encoding, camera model, and
+      timestamp source are realisation-specific unless further constrained.

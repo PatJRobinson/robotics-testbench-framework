@@ -1,4 +1,4 @@
-apiVersion: sim.platform/v0.1
+apiVersion: sim.platform/v0.2
 kind: App
 
 metadata:
@@ -11,42 +11,22 @@ spec:
   category: interactive_control
 
   requires:
-    platformContracts:
-      - differential_drive
+    platforms:
+      - contract: differential_drive_robot
 
-    interfaceContracts:
-      commands:
-        - name: /cmd_vel
-          type: geometry_msgs/msg/Twist
-          direction: publish
-          required: true
+    commands:
+      - contract: differential_drive_cmd_vel
+        bindingConfig:
+          name: /cmd_vel
 
-      observations:
-        - name: /clock
-          type: rosgraph_msgs/msg/Clock
-          direction: subscribe
-          required: true
-
-    features:
-      - sim_clock
+    observations:
+      - contract: sim_clock
 
   optional:
-    interfaceContracts:
-      observations:
-        - name: /odom
-          type: nav_msgs/msg/Odometry
-          direction: subscribe
-          required: false
-
-        - name: /tf
-          type: tf2_msgs/msg/TFMessage
-          direction: subscribe
-          required: false
-
-        - name: /scan
-          type: sensor_msgs/msg/LaserScan
-          direction: subscribe
-          required: false
+    observations:
+      - contract: odometry
+      - contract: tf_tree
+      - contract: lidar2d
 
   provides:
     behaviours:

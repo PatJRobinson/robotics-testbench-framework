@@ -1,0 +1,32 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: ackermann_vehicle_control
+  description: >
+    Command contract for car-like vehicle control using throttle, steering,
+    brake, and reverse semantics.
+
+spec:
+  contractType: command
+
+  representation:
+    class: vehicle_control
+    fields:
+      throttle:
+        meaning: forward drive demand
+        range: [0.0, 1.0]
+      steer:
+        meaning: normalised steering demand
+        range: [-1.0, 1.0]
+      brake:
+        meaning: braking demand
+        range: [0.0, 1.0]
+      reverse:
+        meaning: reverse gear state
+        type: boolean
+
+  notes:
+    - >
+      CARLA VehicleControl is one backend-native implementation of this
+      contract.

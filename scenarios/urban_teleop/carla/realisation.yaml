@@ -1,4 +1,4 @@
-apiVersion: sim.platform/v0.1
+apiVersion: sim.platform/v0.2
 kind: Realisation
 
 metadata:
@@ -6,8 +6,8 @@ metadata:
   description: >
     CARLA realisation of a minimal urban driving teleoperation scenario.
     Launches a CARLA server, loads a town map through a backend-local scenario
-    client, spawns an ego vehicle, and exposes vehicle control/observation
-    interfaces for application-layer use.
+    client, spawns an ego vehicle, exposes observations through native ROS 2
+    where available, and provides ROS-facing control through a semantic adapter.
 
 spec:
   scenarioRef: urban_teleop
@@ -15,42 +15,72 @@ spec:
   platformRef: ego_vehicle
 
   provides:
-    platformContracts:
-      - ego_vehicle
-      - ackermann_vehicle
+    platforms:
+      - contract: ego_vehicle
+      - contract: ackermann_vehicle
 
-    interfaceContracts:
-      commands:
-        - name: /vehicle/control
-          type: carla_msgs/msg/CarlaEgoVehicleControl
-          required: true
+    commands:
+      - contract: ackermann_vehicle_control
+        binding:
+          type: carla_python_api
+          target: carla.VehicleControl
+        notes:
+          - >
+            Native CARLA control surface for throttle, steering, brake, and
+            reverse semantics.
 
-      observations:
-        - name: /clock
-          type: rosgraph_msgs/msg/Clock
-          required: false
+    observations:
+      - contract: sim_clock
+        binding:
+          type: ros_topic
+          defaultName: /clock
+          configurable: []
 
-        - name: /vehicle/odometry
-          type: nav_msgs/msg/Odometry
-          required: false
+      - contract: rgb_camera
+        binding:
+          type: ros_topic
+          defaultTopics:
+            image: /carla//rgb/image
+            cameraInfo: /carla//rgb/camera_info
+          configurable:
+            - rosName
+        notes:
+          - >
+            Exposed through CARLA native ROS 2 sensor support. Topic naming is
+            currently backend-generated and may be normalised later.
 
-        - name: /vehicle/imu
-          type: sensor_msgs/msg/Imu
-          required: false
+    adapters:
+      - name: cmd_vel_to_vehicle_control
+        kind: semantic
+        description: >
+          Approximate adapter from differential-drive-style Twist commands to
+          CARLA Ackermann-style vehicle control. This exists to support early
+          ROS teleoperation, not as a faithful vehicle dynamics interface.
 
-        - name: /vehicle/gnss
-          type: sensor_msgs/msg/NavSatFix
-          required: false
+        provides:
+          commands:
+            - contract: differential_drive_cmd_vel
+              binding:
+                type: ros_topic
+                messageType: geometry_msgs/msg/Twist
+                defaultName: /cmd_vel
+                configurable:
+                  - name
 
-        - name: /vehicle/camera/image_raw
-          type: sensor_msgs/msg/Image
-          required: false
+        consumes:
+          commands:
+            - contract: ackermann_vehicle_control
 
-    observationContracts:
-      - odometry
-      - rgb_camera
-      - imu
-      - gnss
+        implementedBy:
+          process: ros_control_adapter
+          entrypoint: scenarios/urban_teleop/carla/ros_control_adapter.py
+
+        limitations:
+          - >
+            /cmd_vel is not a native Ackermann vehicle command interface.
+          - >
+            Steering and reverse behaviour are approximate and should be
+            replaced by a proper Ackermann command contract later.
 
   native:
     world:
@@ -60,7 +90,8 @@ spec:
     platform:
       type: carla_actor
       roleName: sim_platform_ego
-      blueprintFilter: vehicle.*
+      rosName: ego
+      blueprint: vehicle.lincoln.mkz_2020
       spawn:
         strategy: first_available_spawn_point
 
@@ -73,18 +104,29 @@ spec:
         - configure_synchronous_mode
         - clean_previous_actors
         - spawn_ego_vehicle
-        - attach_optional_sensors
-        - expose_or_prepare_contract_interfaces
+        - attach_rgb_camera_sensor
+        - expose_native_ros2_sensor_topics
+        - update_spectator_camera
+        - tick_world
+        - cleanup_owned_actors
 
     sensors:
       rgbCamera:
-        enabled: false
+        enabled: true
         blueprint: sensor.camera.rgb
+        rosName: rgb
+        roleName: rgb
         attachTo: sim_platform_ego
+        attributes:
+          image_size_x: 600
+          image_size_y: 400
+          fov: 90
+
       imu:
         enabled: false
         blueprint: sensor.other.imu
         attachTo: sim_platform_ego
+
       gnss:
         enabled: false
         blueprint: sensor.other.gnss
@@ -92,7 +134,6 @@ spec:
 
   runtime:
     containerName: carla-sim
-
     processModel: multi_process
 
     rendering:
@@ -114,20 +155,14 @@ spec:
     scenarioReadiness:
       type: carla_actor
       roleName: sim_platform_ego
+      timeoutSeconds: 60
 
     processes:
-      # - name: carla_server
-      #   type: docker
-      #   entrypoint: backends/carla/run.sh
-      #   args:
-      #     - "${native.world.mapName}"
-      #     - "${runtime.rendering.mode}"
-
       - name: scenario_client
         type: python
         entrypoint: scenarios/urban_teleop/carla/start_realisation.py
         after:
-          - carla_server
+          - backend
         args:
           - --map
           - Town01
@@ -137,6 +172,8 @@ spec:
       - name: ros_control_adapter
         type: ros_python
         entrypoint: scenarios/urban_teleop/carla/ros_control_adapter.py
+        after:
+          - scenario_client
 
     infrastructure:
       containerized: true
@@ -162,12 +199,13 @@ spec:
     resetSemantics:
       description: >
         Reset reloads the configured CARLA map, removes previous actors owned
-        by this realisation, respawns the ego vehicle, and reapplies scenario
-        settings.
+        by this realisation, respawns the ego vehicle, reapplies scenario
+        settings, and reattaches enabled sensors.
 
     cleanup:
       actorRoleNames:
         - sim_platform_ego
+        - rgb
 
   constraints:
     knownIssues:
@@ -176,11 +214,17 @@ spec:
         The runtime should verify RPC responsiveness before launching dependent
         clients.
       - >
+        Scenario readiness is distinct from backend readiness. The app should
+        not start until the ego actor exists.
+      - >
         GUI mode launches a CARLA Unreal window as part of the backend process.
         This is not an attachable framework view client.
       - >
         On NixOS, rendering requires the host NVIDIA OpenGL/Vulkan driver stack
         to be mounted into the container.
+      - >
+        Native CARLA ROS 2 currently exposes /clock and enabled sensor topics,
+        but vehicle control is provided here through a local semantic adapter.
       - >
         No-rendering mode is suitable for control tests but does not support
         rendered camera observations.
@@ -190,3 +234,4 @@ spec:
     - urban_driving
     - teleop
     - carla
+    - ros2
