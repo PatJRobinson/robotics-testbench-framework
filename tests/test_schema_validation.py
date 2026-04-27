@@ -75,3 +75,40 @@ def test_realisation_invalid_process_type_fails():
     realisation["spec"]["runtime"]["processes"][0]["type"] = "weird_python"
 
     assert_invalid(realisation, "realisation.schema.json")
+
+def test_valid_contract_schema_passes():
+    contract = yaml.safe_load(
+        (ROOT / "contracts" / "command" / "differential_drive_cmd_vel.yaml").read_text()
+    )
+
+    assert_valid(contract, "contract.schema.json")
+
+
+def test_contract_missing_contract_type_fails():
+    contract = yaml.safe_load(
+        (ROOT / "contracts" / "command" / "differential_drive_cmd_vel.yaml").read_text()
+    )
+
+    del contract["spec"]["contractType"]
+
+    assert_invalid(contract, "contract.schema.json")
+
+
+def test_contract_invalid_contract_type_fails():
+    contract = yaml.safe_load(
+        (ROOT / "contracts" / "command" / "differential_drive_cmd_vel.yaml").read_text()
+    )
+
+    contract["spec"]["contractType"] = "banana"
+
+    assert_invalid(contract, "contract.schema.json")
+
+
+def test_contract_bare_note_fails_if_notes_not_array():
+    contract = yaml.safe_load(
+        (ROOT / "contracts" / "command" / "differential_drive_cmd_vel.yaml").read_text()
+    )
+
+    contract["spec"]["notes"] = "this should be a list"
+
+    assert_invalid(contract, "contract.schema.json")
