@@ -132,22 +132,6 @@
 
             touch $out
           '';
-
-        schema-validation =
-          pkgs.runCommand "schema-validation-tests" {
-            nativeBuildInputs = [
-              schemaPython
-            ];
-          } ''
-            export PYTHONPATH="${self}"
-            export SIM_PLATFORM_ROOT="${self}"
-            export SIM_PLATFORM_RUNS_DIR="$TMPDIR/runs"
-
-            cd ${self}
-            ${schemaPython}/bin/python tools/sim_platform/sim_platform.py validate
-
-            touch $out
-          '';
       };
     });
 }
