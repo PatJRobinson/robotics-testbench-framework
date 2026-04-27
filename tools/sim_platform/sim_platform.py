@@ -20,6 +20,7 @@ ROOT = Path(root_env).resolve()
 RUNS_DIR = Path(os.environ.get("SIM_PLATFORM_RUNS_DIR", ROOT / "runs")).resolve()
 SCHEMAS = {
     "App": ROOT / "schemas" / "app.schema.json",
+    "Realisation": ROOT / "schemas" / "realisation.schema.json",
 }
 
 def load_yaml(path: Path) -> dict:
@@ -499,7 +500,8 @@ def main() -> None:
         paths = [Path(p) for p in args.paths]
 
         if not paths:
-            paths = list((ROOT / "apps").glob("*/app.yaml"))
+            paths = list((ROOT / "apps").glob("*/app.yaml")) \
+            + list((ROOT / "scenarios").rglob("realisation.yaml"))
 
         for path in paths:
             validate_yaml_file(path)

@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sim.platform.realisation.v0.2",
+  "title": "sim-platform Realisation",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "sim.platform/v0.2"
+    },
+    "kind": {
+      "const": "Realisation"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "contractVersion": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["scenarioRef", "backendRef", "provides", "runtime"],
+      "additionalProperties": true,
+      "properties": {
+        "scenarioRef": { "type": "string", "minLength": 1 },
+        "backendRef": { "type": "string", "minLength": 1 },
+        "robotRef": { "type": "string", "minLength": 1 },
+        "platformRef": { "type": "string", "minLength": 1 },
+
+        "provides": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "platforms": { "$ref": "#/$defs/contractList" },
+            "commands": { "$ref": "#/$defs/providedContractList" },
+            "observations": { "$ref": "#/$defs/providedContractList" },
+            "adapters": { "$ref": "#/$defs/adapterList" }
+          }
+        },
+
+        "runtime": {
+          "type": "object",
+          "required": ["containerName", "launch", "readiness"],
+          "additionalProperties": true,
+          "properties": {
+            "containerName": { "type": "string", "minLength": 1 },
+            "processModel": {
+              "type": "string",
+              "enum": ["single_process", "multi_process"]
+            },
+            "rendering": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": ["gui", "offscreen", "no_rendering"]
+                },
+                "frameworkManagedView": { "type": "boolean" }
+              }
+            },
+            "launch": {
+              "type": "object",
+              "required": ["command"],
+              "additionalProperties": true,
+              "properties": {
+                "mode": { "type": "string" },
+                "command": { "type": "string", "minLength": 1 },
+                "args": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            },
+            "readiness": {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["ros_topic", "carla_rpc"]
+                },
+                "topic": { "type": "string" },
+                "host": { "type": "string" },
+                "port": { "type": "integer" },
+                "timeoutSeconds": { "type": "number" }
+              }
+            },
+            "scenarioReadiness": {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["carla_actor"]
+                },
+                "roleName": { "type": "string" },
+                "timeoutSeconds": { "type": "number" }
+              }
+            },
+            "processes": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/runtimeProcess" }
+            }
+          }
+        },
+
+        "native": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "contractRef": {
+      "type": "object",
+      "required": ["contract"],
+      "additionalProperties": false,
+      "properties": {
+        "contract": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+
+    "contractList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contractRef" }
+    },
+
+    "binding": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "defaultName": { "type": "string" },
+        "defaultTopics": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "messageType": { "type": "string" },
+        "target": { "type": "string" },
+        "configurable": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "providedContract": {
+      "type": "object",
+      "required": ["contract", "binding"],
+      "additionalProperties": true,
+      "properties": {
+        "contract": { "type": "string", "minLength": 1 },
+        "binding": { "$ref": "#/$defs/binding" },
+        "required": { "type": "boolean" },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "providedContractList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/providedContract" }
+    },
+
+    "adapterList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/adapter" }
+    },
+
+    "adapter": {
+      "type": "object",
+      "required": ["name", "kind", "provides"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["binding", "semantic"]
+        },
+        "description": { "type": "string" },
+        "provides": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "platforms": { "$ref": "#/$defs/contractList" },
+            "commands": { "$ref": "#/$defs/providedContractList" },
+            "observations": { "$ref": "#/$defs/providedContractList" }
+          }
+        },
+        "consumes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "platforms": { "$ref": "#/$defs/contractList" },
+            "commands": { "$ref": "#/$defs/contractList" },
+            "observations": { "$ref": "#/$defs/contractList" }
+          }
+        },
+        "implementedBy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "process": { "type": "string" },
+            "entrypoint": { "type": "string" }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "runtimeProcess": {
+      "type": "object",
+      "required": ["name", "type", "entrypoint"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["python", "ros_python", "shell", "docker"]
+        },
+        "entrypoint": { "type": "string", "minLength": 1 },
+        "after": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
