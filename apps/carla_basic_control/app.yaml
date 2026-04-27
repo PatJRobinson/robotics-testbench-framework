@@ -1,4 +1,4 @@
-apiVersion: sim.platform/v0.1
+apiVersion: sim.platform/v0.2
 kind: App
 
 metadata:
@@ -13,17 +13,13 @@ spec:
     entrypoint: apps/carla_basic_control/run.py
 
   requires:
-    platformContracts:
-      - ego_vehicle
+    platforms:
+      - contract: ackermann_vehicle
 
-    interfaces:
-      commands:
-        - name: carla_python_api
-          type: carla.Client
-
-      observations:
-        - name: ego_pose
-          type: carla.Location
+    commands:
+      - contract: differential_drive_cmd_vel
+        bindingConfig:
+          name: /cmd_vel
 
   behaviour:
     mode: scripted

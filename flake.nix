@@ -47,9 +47,15 @@
 
       carla = import ./infra/nix/carla-python.nix {inherit pkgs;};
 
+      schemaPython = pkgs.python312.withPackages (ps: [
+        ps.pyyaml
+        ps.jsonschema
+      ]);
+
       python = pkgs.python312.withPackages (ps: [
         ps.pyyaml
         ps.pytest
+        ps.jsonschema
         carla.carlaPythonPkg
       ]);
 
@@ -109,21 +115,39 @@
         '';
       };
 
-      checks.contract-validation =
-        pkgs.runCommand "contract-validation-tests" {
-          nativeBuildInputs = [
-            python
-          ];
-        } ''
-          export PYTHONPATH="${self}"
-          export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
-          export SIM_PLATFORM_ROOT="$PWD"
-          export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
+      checks = {
+        contract-validation =
+          pkgs.runCommand "contract-validation-tests" {
+            nativeBuildInputs = [
+              python
+            ];
+          } ''
+            export PYTHONPATH="${self}"
+            export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+            export SIM_PLATFORM_ROOT="$PWD"
+            export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
 
-          cd ${self}
-          pytest tests
+            cd ${self}
+            pytest tests
 
-          touch $out
-        '';
+            touch $out
+          '';
+
+        schema-validation =
+          pkgs.runCommand "schema-validation-tests" {
+            nativeBuildInputs = [
+              schemaPython
+            ];
+          } ''
+            export PYTHONPATH="${self}"
+            export SIM_PLATFORM_ROOT="${self}"
+            export SIM_PLATFORM_RUNS_DIR="$TMPDIR/runs"
+
+            cd ${self}
+            ${schemaPython}/bin/python tools/sim_platform/sim_platform.py validate
+
+            touch $out
+          '';
+      };
     });
 }
