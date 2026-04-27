@@ -49,6 +49,7 @@
 
       python = pkgs.python312.withPackages (ps: [
         ps.pyyaml
+        ps.pytest
         carla.carlaPythonPkg
       ]);
 
