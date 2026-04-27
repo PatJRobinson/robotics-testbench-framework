@@ -81,7 +81,6 @@ def required_contracts(app: dict) -> dict[str, set[str]]:
         "observations": contract_names(requires.get("observations", [])),
     }
 
-
 def validate_contracts(app: dict, realisation: dict) -> None:
     required = required_contracts(app)
     provided = provided_contracts(realisation)
@@ -103,6 +102,83 @@ def validate_contracts(app: dict, realisation: dict) -> None:
 
     print("[sim-platform] Contract validation passed")
 
+def find_contract_entries(entries: list[dict], contract: str) -> list[dict]:
+    return [
+        entry for entry in entries or []
+        if isinstance(entry, dict) and entry.get("contract") == contract
+    ]
+
+
+def realisation_contract_entries(realisation: dict, kind: str) -> list[dict]:
+    provides = realisation["spec"].get("provides", {})
+    entries = list(provides.get(kind, []) or [])
+
+    for adapter in provides.get("adapters", []) or []:
+        adapter_provides = adapter.get("provides", {})
+        entries.extend(adapter_provides.get(kind, []) or [])
+
+    return entries
+
+
+def validate_binding_config(app: dict, realisation: dict) -> list[dict]:
+    resolved = []
+
+    requires = app["spec"].get("requires", {})
+
+    for kind in ("commands", "observations", "platforms"):
+        for required in requires.get(kind, []) or []:
+            contract = required.get("contract")
+            if not contract:
+                continue
+
+            binding_config = required.get("bindingConfig", {})
+            candidates = find_contract_entries(
+                realisation_contract_entries(realisation, kind),
+                contract,
+            )
+
+            if not candidates:
+                continue  # contract validation already handles this
+
+            provided = candidates[0]
+            binding = provided.get("binding", {})
+            configurable = set(binding.get("configurable", []) or [])
+
+            unsupported = set(binding_config.keys()) - configurable
+            if unsupported:
+                raise RuntimeError(
+                    f"Binding config validation failed for {kind}:{contract}. "
+                    f"Unsupported config fields: {sorted(unsupported)}. "
+                    f"Configurable fields: {sorted(configurable)}"
+                )
+
+            resolved.append({
+                "kind": kind,
+                "contract": contract,
+                "binding": binding,
+                "bindingConfig": binding_config,
+            })
+
+    print("[sim-platform] Binding config validation passed")
+    return resolved
+
+def write_run_metadata(plan: dict, run_dir: Path) -> None:
+    metadata = {
+        "experiment": plan["experiment_name"],
+        "app": plan["app_ref"],
+        "realisation": plan["realisation_ref"],
+        "backend": plan["backend_ref"],
+        "contracts": {
+            "resolvedBindings": plan.get("resolved_bindings", []),
+        },
+    }
+
+    metadata_path = run_dir / "metadata.yaml"
+    with metadata_path.open("w") as f:
+        yaml.safe_dump(metadata, f, sort_keys=False)
+
+    print(f"[sim-platform] Run metadata: {metadata_path}")
+
 def resolve_experiment(name: str) -> dict:
     exp_path = find_experiment(name)
     exp = load_yaml(exp_path)
@@ -118,6 +194,7 @@ def resolve_experiment(name: str) -> dict:
     realisation = load_yaml(realisation_path)
 
     validate_contracts(app, realisation)
+    resolved_bindings = validate_binding_config(app, realisation)
 
     return {
         "experiment_name": name,
@@ -290,6 +367,8 @@ def run_experiment(name: str) -> None:
 
     run_dir = RUNS_DIR / plan["experiment_name"]
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    write_run_metadata(plan, run_dir)
 
     app_cmd = get_app_command(plan["app_runtime"])
 
