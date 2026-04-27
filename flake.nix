@@ -124,8 +124,11 @@
           } ''
             export PYTHONPATH="${self}"
             export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
-            export SIM_PLATFORM_ROOT="$PWD"
-            export SIM_PLATFORM_RUNS_DIR="$PWD/runs"
+            export SIM_PLATFORM_ROOT="${self}"
+            export SIM_PLATFORM_RUNS_DIR="$TMPDIR/runs"
+
+            cd ${self}
+            pytest -p no:cacheprovider tests
 
             cd ${self}
             pytest tests
