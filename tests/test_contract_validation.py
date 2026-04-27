@@ -140,6 +140,7 @@ def test_binding_config_passes_for_configurable_field():
                 "configurable": ["name"],
             },
             "bindingConfig": {"name": "/cmd_vel"},
+            "resolved": {"name": "/cmd_vel"},
         }
     ]
 

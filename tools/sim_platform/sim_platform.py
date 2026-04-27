@@ -177,6 +177,7 @@ def validate_binding_config(app: dict, realisation: dict) -> list[dict]:
                 "contract": contract,
                 "binding": binding,
                 "bindingConfig": binding_config,
+                "resolved": resolve_binding(binding, binding_config),
             })
 
     print("[sim-platform] Binding config validation passed")
@@ -188,9 +189,7 @@ def write_run_metadata(plan: dict, run_dir: Path) -> None:
         "app": plan["app_ref"],
         "realisation": plan["realisation_ref"],
         "backend": plan["backend_ref"],
-        "contracts": {
-            "resolvedBindings": plan.get("resolved_bindings", []),
-        },
+        "contracts": plan.get("contracts", {}),
     }
 
     metadata_path = run_dir / "metadata.yaml"
@@ -198,6 +197,74 @@ def write_run_metadata(plan: dict, run_dir: Path) -> None:
         yaml.safe_dump(metadata, f, sort_keys=False)
 
     print(f"[sim-platform] Run metadata: {metadata_path}")
+
+def satisfaction_trace(app: dict, realisation: dict) -> list[dict]:
+    requires = app["spec"].get("requires", {})
+    provides = realisation["spec"].get("provides", {})
+
+    trace = []
+
+    for kind in ("platforms", "commands", "observations"):
+        direct_entries = provides.get(kind, []) or []
+
+        adapter_entries = []
+        for adapter in provides.get("adapters", []) or []:
+            adapter_provides = adapter.get("provides", {})
+            for entry in adapter_provides.get(kind, []) or []:
+                adapter_entries.append((adapter, entry))
+
+        for required in requires.get(kind, []) or []:
+            contract = required.get("contract")
+            if not contract:
+                continue
+
+            direct_match = next(
+                (entry for entry in direct_entries if entry.get("contract") == contract),
+                None,
+            )
+
+            if direct_match:
+                trace.append({
+                    "kind": kind,
+                    "contract": contract,
+                    "satisfiedBy": "direct",
+                    "provider": "realisation",
+                })
+                continue
+
+            adapter_match = next(
+                (
+                    (adapter, entry)
+                    for adapter, entry in adapter_entries
+                    if entry.get("contract") == contract
+                ),
+                None,
+            )
+
+            if adapter_match:
+                adapter, _entry = adapter_match
+                trace.append({
+                    "kind": kind,
+                    "contract": contract,
+                    "satisfiedBy": "adapter",
+                    "adapter": adapter.get("name"),
+                    "adapterKind": adapter.get("kind"),
+                })
+
+    return trace
+
+def resolve_binding(binding: dict, binding_config: dict) -> dict:
+    resolved = {}
+
+    if "defaultName" in binding:
+        resolved["name"] = binding["defaultName"]
+
+    if "defaultTopics" in binding:
+        resolved["topics"] = binding["defaultTopics"]
+
+    resolved.update(binding_config or {})
+
+    return resolved
 
 def resolve_experiment(name: str) -> dict:
     exp_path = find_experiment(name)
@@ -216,6 +283,11 @@ def resolve_experiment(name: str) -> dict:
     validate_contracts(app, realisation)
     resolved_bindings = validate_binding_config(app, realisation)
 
+    required = required_contracts(app)
+    provided = provided_contracts(realisation)
+
+    trace = satisfaction_trace(app, realisation)
+
     return {
         "experiment_name": name,
         "experiment_path": str(exp_path.relative_to(ROOT)),
@@ -231,6 +303,12 @@ def resolve_experiment(name: str) -> dict:
         "scenario_readiness": realisation["spec"]["runtime"].get("scenarioReadiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
         "processes": realisation["spec"]["runtime"].get("processes", []),
+        "contracts": {
+            "required": {k: sorted(v) for k, v in required.items()},
+            "provided": {k: sorted(v) for k, v in provided.items()},
+            "satisfactionTrace": trace,
+            "resolvedBindings": resolved_bindings,
+        },
     }
 
 
@@ -473,6 +551,56 @@ def run_experiment(name: str) -> None:
         if not succeeded:
             print("[sim-platform] experiment failed")
 
+def print_explanation(plan: dict) -> None:
+    contracts = plan["contracts"]
+    trace = contracts.get("satisfactionTrace", [])
+    bindings = contracts.get("resolvedBindings", [])
+
+    print(f"Experiment: {plan['experiment_name']}")
+    print(f"App: {plan['app_ref']}")
+    print(f"Realisation: {plan['realisation_ref']}")
+    print(f"Backend: {plan['backend_ref']}")
+    print()
+
+    for kind in ("platforms", "commands", "observations"):
+        entries = [t for t in trace if t["kind"] == kind]
+        if not entries:
+            continue
+
+        print(f"Required {kind}:")
+        for entry in entries:
+            contract = entry["contract"]
+            print(f"- {contract}")
+
+            if entry["satisfiedBy"] == "direct":
+                print("  satisfied: direct")
+            elif entry["satisfiedBy"] == "adapter":
+                print(f"  satisfied: adapter {entry.get('adapter')}")
+                print(f"  adapter kind: {entry.get('adapterKind')}")
+
+            binding = next(
+                (
+                    b for b in bindings
+                    if b["kind"] == kind and b["contract"] == contract
+                ),
+                None,
+            )
+
+            if binding:
+                resolved = binding.get("resolved", {})
+                if "name" in resolved:
+                    print(f"  resolved binding: {resolved['name']}")
+                elif "topics" in resolved:
+                    print("  resolved topics:")
+                    for topic_name, topic in resolved["topics"].items():
+                        print(f"    {topic_name}: {topic}")
+
+        print()
+
+def explain_experiment(name: str):
+    plan = resolve_experiment(name)
+    print_explanation(plan)
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="sim-platform")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -487,6 +615,10 @@ def main() -> None:
 
     validate = sub.add_parser("validate")
     validate.add_argument("paths", nargs="*")
+
+    explain_parser = sub.add_parser("explain")
+    explain_parser.add_argument("kind", choices=["experiment"])
+    explain_parser.add_argument("name")
 
     args = parser.parse_args()
 
@@ -507,6 +639,9 @@ def main() -> None:
 
         for path in paths:
             validate_yaml_file(path)
+
+    elif args.command == "explain":
+        explain_experiment(args.name)
 
 if __name__ == "__main__":
     main()

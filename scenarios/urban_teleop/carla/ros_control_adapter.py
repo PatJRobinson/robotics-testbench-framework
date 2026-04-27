@@ -9,6 +9,7 @@ import carla
 import rclpy
 from geometry_msgs.msg import Twist
 
+from rclpy.executors import ExternalShutdownException
 
 ROLE_NAME = "sim_platform_ego"
 
@@ -84,6 +85,8 @@ class CarlaCmdVelAdapter:
 
         try:
             rclpy.spin(self.node)
+        except ExternalShutdownException:
+            pass
         finally:
             self.stop_requested = True
             self.vehicle.apply_control(
