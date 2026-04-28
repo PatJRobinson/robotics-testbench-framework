@@ -551,6 +551,19 @@ def run_experiment(name: str) -> None:
         if not succeeded:
             print("[sim-platform] experiment failed")
 
+def print_available_observations(plan: dict) -> None:
+    provided = plan["contracts"].get("provided", {})
+    observations = provided.get("observations", [])
+
+    if not observations:
+        return
+
+    print("Available observations:")
+    for contract in observations:
+        print(f"- {contract}")
+
+    print()
+
 def print_explanation(plan: dict) -> None:
     contracts = plan["contracts"]
     trace = contracts.get("satisfactionTrace", [])
@@ -596,6 +609,8 @@ def print_explanation(plan: dict) -> None:
                         print(f"    {topic_name}: {topic}")
 
         print()
+
+    print_available_observations(plan)
 
 def explain_experiment(name: str):
     plan = resolve_experiment(name)

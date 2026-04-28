@@ -1,0 +1,25 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: tf_tree
+  description: >
+    Observation contract for coordinate frame transforms.
+
+spec:
+  contractType: observation
+
+  representation:
+    class: ros_topic
+    messageType: tf2_msgs/msg/TFMessage
+
+  semantics:
+    includes:
+      - frame_transforms
+      - parent_child_relationships
+    timeStamped: true
+
+  notes:
+    - >
+      This contract indicates transform publication, not necessarily a complete
+      or globally consistent frame tree.

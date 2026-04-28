@@ -1,0 +1,24 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: lidar2d
+  description: >
+    Observation contract for planar lidar / laser scan data.
+
+spec:
+  contractType: observation
+
+  representation:
+    class: ros_topic
+    messageType: sensor_msgs/msg/LaserScan
+
+  semantics:
+    modality: range_scan
+    dimensionality: 2d
+    timeStamped: true
+
+  notes:
+    - >
+      Angular range, resolution, noise model, frame, and update rate are
+      realisation-specific unless further constrained.

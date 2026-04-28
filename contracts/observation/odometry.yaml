@@ -1,0 +1,26 @@
+apiVersion: sim.platform/v0.2
+kind: Contract
+
+metadata:
+  name: odometry
+  description: >
+    Observation contract for platform pose and velocity estimates.
+
+spec:
+  contractType: observation
+
+  representation:
+    class: ros_topic
+    messageType: nav_msgs/msg/Odometry
+
+  semantics:
+    includes:
+      - pose
+      - twist
+      - frame_reference
+    timeStamped: true
+
+  notes:
+    - >
+      Frame naming, covariance semantics, and source of truth are
+      realisation-specific unless further constrained.

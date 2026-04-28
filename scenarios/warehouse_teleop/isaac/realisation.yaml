@@ -31,6 +31,8 @@ spec:
           type: ros_topic
           defaultName: /clock
           configurable: []
+          status: planned
+          required: false
 
       - contract: odometry
         binding:
@@ -39,6 +41,7 @@ spec:
           configurable:
             - name
         required: false
+        status: planned
 
       - contract: tf_tree
         binding:
@@ -47,6 +50,7 @@ spec:
           configurable:
             - name
         required: false
+        status: planned
 
       - contract: lidar2d
         binding:
@@ -55,6 +59,7 @@ spec:
           configurable:
             - name
         required: false
+        status: planned
 
   native:
     world:
