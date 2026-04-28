@@ -303,6 +303,8 @@ def resolve_experiment(name: str) -> dict:
         "scenario_readiness": realisation["spec"]["runtime"].get("scenarioReadiness", {}),
         "container_name": realisation["spec"]["runtime"]["containerName"],
         "processes": realisation["spec"]["runtime"].get("processes", []),
+        "views": realisation["spec"].get("views", {}),
+        "provided_observations": realisation["spec"]["provides"].get("observations", []),
         "contracts": {
             "required": {k: sorted(v) for k, v in required.items()},
             "provided": {k: sorted(v) for k, v in provided.items()},
@@ -317,6 +319,93 @@ def print_plan(plan: dict) -> None:
     for key, value in plan.items():
         print(f"  {key}: {value}")
 
+def print_views(plan: dict) -> None:
+    views = plan.get("views", {})
+
+    print(f"Experiment: {plan['experiment_name']}")
+    print(f"Realisation: {plan['realisation_ref']}")
+    print()
+
+    backend_native = views.get("backendNative", [])
+    attachable = views.get("attachable", [])
+
+    if backend_native:
+        print("Backend-native views:")
+        for view in backend_native:
+            print(f"- {view.get('name')}")
+            if "description" in view:
+                print(f"  {view['description']}")
+            managed = view.get("managedByFramework")
+            if managed is not None:
+                print(f"  managed by framework: {managed}")
+        print()
+
+    if attachable:
+        print("Attachable views:")
+        for view in attachable:
+            print(f"- {view.get('name')}")
+            if "type" in view:
+                print(f"  type: {view['type']}")
+
+            observations = (
+                view.get("consumes", {})
+                .get("observations", [])
+            )
+            if observations:
+                print("  consumes observations:")
+                for obs in observations:
+                    print(f"    - {obs}")
+        print()
+
+    if not backend_native and not attachable:
+        print("No views declared.")
+
+def print_observe(plan: dict) -> None:
+    observations = plan.get("provided_observations", [])
+
+    print(f"Experiment: {plan['experiment_name']}")
+    print(f"Realisation: {plan['realisation_ref']}")
+    print()
+
+    if not observations:
+        print("No observations declared.")
+        return
+
+    print("Declared observations:")
+    for obs in observations:
+        contract = obs.get("contract")
+        binding = obs.get("binding", {})
+
+        print(f"- {contract}")
+
+        if binding.get("type") == "ros_topic":
+            if "defaultName" in binding:
+                topic = binding["defaultName"]
+                print(f"  topic: {topic}")
+                print(f"  check: ros2 topic echo {topic} --once")
+
+            if "defaultTopics" in binding:
+                print("  topics:")
+                for key, topic in binding["defaultTopics"].items():
+                    print(f"    {key}: {topic}")
+                print("  check: ros2 topic list")
+
+        status = obs.get("status")
+        if status:
+            print(f"  status: {status}")
+
+        if obs.get("required") is False:
+            print("  required: false")
+
+    print()
+
+def views_experiment(name: str) -> None:
+    plan = resolve_experiment(name)
+    print_views(plan)
+
+def observe_experiment(name: str) -> None:
+    plan = resolve_experiment(name)
+    print_observe(plan)
 
 def wait_for_topic(topic: str, timeout: float = 120.0) -> None:
     print(f"\n[sim-platform] Waiting for topic: {topic}")
@@ -635,6 +724,14 @@ def main() -> None:
     explain_parser.add_argument("kind", choices=["experiment"])
     explain_parser.add_argument("name")
 
+    views = sub.add_parser("views")
+    views.add_argument("kind", choices=["experiment"])
+    views.add_argument("name")
+
+    observe = sub.add_parser("observe")
+    observe.add_argument("kind", choices=["experiment"])
+    observe.add_argument("name")
+
     args = parser.parse_args()
 
     if args.command == "resolve":
@@ -657,6 +754,12 @@ def main() -> None:
 
     elif args.command == "explain":
         explain_experiment(args.name)
+
+    elif args.command == "views":
+        views_experiment(args.name)
+
+    elif args.command == "observe":
+        observe_experiment(args.name)
 
 if __name__ == "__main__":
     main()

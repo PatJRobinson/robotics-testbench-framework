@@ -14,6 +14,20 @@ spec:
   backendRef: carla
   platformRef: ego_vehicle
 
+  views:
+    backendNative:
+      - name: carla_gui
+        description: Native CARLA Unreal Engine window
+        managedByFramework: false
+
+    attachable:
+      - name: foxglove
+        type: ros
+        consumes:
+          observations:
+            - rgb_camera
+            - sim_clock
+
   provides:
     platforms:
       - contract: ego_vehicle
